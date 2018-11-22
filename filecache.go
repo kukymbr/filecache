@@ -90,7 +90,7 @@ func (c *FileCache) ItemPath(namespace string, key string) (string, error) {
 	}
 	key = c.Key(key)
 	dir := c.Path
-	dir += namespace + "/" + key[:2] + "/" + key[2:4] + "/" + key[4:6] + "/"
+	dir += "/" + namespace + "/" + key[:2] + "/" + key[2:4] + "/" + key[4:6] + "/"
 
 	err := os.MkdirAll(dir, 0744)
 	if err != nil {
