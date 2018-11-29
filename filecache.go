@@ -12,7 +12,7 @@ const NamespaceDefault = "dft"
 
 // Create file cache instance
 func New(path string, namespaceDefault string) (*FileCache, error) {
-	err := os.MkdirAll(path, 0644)
+	err := os.MkdirAll(path, 0744)
 	if err != nil {
 		return nil, err
 	}
