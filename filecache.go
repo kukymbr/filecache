@@ -41,7 +41,7 @@ type FileCache struct {
 
 // Write data from reader to the cache item
 func (c *FileCache) WriteFromReader(key string, source io.Reader, namespace string) error {
-	path, err := c.ItemPath(key, namespace)
+	path, err := c.ItemPath(key, namespace, false)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (c *FileCache) WriteFromReader(key string, source io.Reader, namespace stri
 
 // Get cache item reader
 func (c *FileCache) Reader(key string, namespace string) (io.Reader, error) {
-	path, err := c.ItemPath(key, namespace)
+	path, err := c.ItemPath(key, namespace, false)
 	if err != nil {
 		return nil, err
 	}
@@ -84,13 +84,16 @@ func (c *FileCache) Reader(key string, namespace string) (io.Reader, error) {
 }
 
 // Get Key path
-func (c *FileCache) ItemPath(key string, namespace string) (string, error) {
+func (c *FileCache) ItemPath(key string, namespace string, relative bool) (string, error) {
 	if namespace == "" {
 		namespace = c.NamespaceDefault
 	}
 	key = c.Key(key)
-	dir := c.Path
-	dir += "/" + namespace + "/" + key[:2] + "/" + key[2:4] + "/" + key[4:6] + "/"
+	dir := ""
+	if !relative {
+		dir = c.Path + "/"
+	}
+	dir += namespace + "/" + key[:2] + "/" + key[2:4] + "/" + key[4:6] + "/"
 
 	err := os.MkdirAll(dir, 0744)
 	if err != nil {
