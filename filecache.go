@@ -84,7 +84,7 @@ func (c *FileCache) Reader(key string, namespace string) (io.Reader, error) {
 }
 
 // Get Key path
-func (c *FileCache) ItemPath(namespace string, key string) (string, error) {
+func (c *FileCache) ItemPath(key string, namespace string) (string, error) {
 	if namespace == "" {
 		namespace = c.NamespaceDefault
 	}
