@@ -41,7 +41,7 @@ type FileCache struct {
 
 // Write data from reader to the cache item
 func (c *FileCache) WriteFromReader(key string, source io.Reader, namespace string) error {
-	path, err := c.ItemPath(namespace, key)
+	path, err := c.ItemPath(key, namespace)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (c *FileCache) WriteFromReader(key string, source io.Reader, namespace stri
 
 // Get cache item reader
 func (c *FileCache) Reader(key string, namespace string) (io.Reader, error) {
-	path, err := c.ItemPath(namespace, key)
+	path, err := c.ItemPath(key, namespace)
 	if err != nil {
 		return nil, err
 	}
