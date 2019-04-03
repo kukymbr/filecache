@@ -14,7 +14,7 @@ type Meta struct {
 	Namespace string `json:"n"`
 
 	// OriginalName is an original file name; optional
-	OriginalName string `json:"o"`
+	OriginalName string `json:"o,omitempty"`
 
 	// TTL is a item's time-to-live value in seconds
 	TTL int64 `json:"t"`
@@ -22,6 +22,9 @@ type Meta struct {
 	// Created is a time when cache file was written
 	// Do not set it by yourself
 	Created int64 `json:"c"`
+
+	// Fields is a map of any others metadata fields
+	Fields map[string]interface{} `json:"f,omitempty"`
 }
 
 // Item is a cached item structure
