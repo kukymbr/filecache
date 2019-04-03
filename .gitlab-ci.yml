@@ -1,4 +1,4 @@
-image: golang:1.12-alpine
+image: golang:1.12
 
 variables:
   REPO_NAME: gitlab.com/kukymbrgo/filecache
