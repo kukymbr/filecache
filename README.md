@@ -39,9 +39,9 @@ func main()  {
     } 
     
     // Set instance defaults:
-    fc.NamespaceDefault = "images"
+    fc.NamespaceDefault = "wiki"
     fc.TTLDefault = 3600
-    fc.Ext = ".png"
+    fc.Ext = ".html"
     
     // Read and write some data 
     
