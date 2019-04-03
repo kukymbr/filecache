@@ -1,7 +1,6 @@
 # Go FileCache
 
-`filecache` is a package to write data from reader to cache files 
-with blackjack and metadata.
+Store data from any io.Reader to cache files with TTL and metadata.
 
 ## Installation
 
