@@ -2,10 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// filecache is a package to write data from reader
-// to cache files with TTL structured by keys' hashes
-// to avoid listing speed problems.
-
+// Package filecache is a package to write data from any io.Reader
+// to cache files with TTL and metadata.
 package filecache
 
 import (
