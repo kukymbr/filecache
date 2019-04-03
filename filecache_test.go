@@ -84,11 +84,3 @@ func TestFileCache_WriteRead(t *testing.T) {
 		}
 	}
 }
-
-func TestNew(t *testing.T) {
-	invalid := "/invalidQWERTY.12345/file/path/"
-	_, err := filecache.New(invalid)
-	if err == nil {
-		t.Error("missing expected error on creating log instance with non-accessible path")
-	}
-}
