@@ -21,6 +21,8 @@ format:
     - go get -u golang.org/x/lint/golint && golint -set_exit_status $(go list ./...)
     - go test -race -coverprofile=coverage.out ./... && go tool cover -func=coverage.out
   coverage: '/^total:\s+\(statements\)\s+(\d+\.\d+%)$/'
+  only:
+    - master
 
 compile:
   stage: build
@@ -29,3 +31,5 @@ compile:
   artifacts:
     paths:
       - filecache
+  only:
+    - master
