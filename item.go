@@ -16,8 +16,8 @@ type Meta struct {
 	// OriginalName is an original file name; optional
 	OriginalName string `json:"o"`
 
-	// TTLSeconds is a item's time-to-live value in seconds
-	TTLSeconds int64 `json:"t"`
+	// TTL is a item's time-to-live value in seconds
+	TTL int64 `json:"t"`
 
 	// Created is a time when cache file was written
 	// Do not set it by yourself

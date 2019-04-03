@@ -82,7 +82,7 @@ func (c *FileCache) Write(meta *Meta, src io.Reader) (written int64, err error) 
 	}
 
 	if err = c.writeMeta(path, meta); err != nil {
-		c.invalidatePath(path)
+		_ = c.invalidatePath(path)
 		return 0, err
 	}
 
@@ -103,11 +103,11 @@ func (c *FileCache) Read(key string, namespace string) (item *Item, err error) {
 
 	meta := c.readMeta(path)
 	if meta == nil {
-		c.invalidatePath(path)
+		_ = c.invalidatePath(path)
 		return nil, errors.New("failed to read meta for key" + key + " in namespace " + namespace)
 	}
 	if c.isExpired(meta) {
-		c.invalidatePath(path)
+		_ = c.invalidatePath(path)
 		return nil, errors.New("file is expired")
 	}
 
@@ -125,26 +125,40 @@ func (c *FileCache) Read(key string, namespace string) (item *Item, err error) {
 	return item, nil
 }
 
-// invalidate deletes cache item by its key & namespace
-func (c *FileCache) invalidate(key string, namespace string) {
+// Invalidate deletes cache item by its key & namespace
+func (c *FileCache) Invalidate(key string, namespace string) error {
 	path, err := c.itemPath(key, namespace, false, false)
 	if err != nil {
-		return
+		return err
 	}
-	c.invalidatePath(path)
+	return c.invalidatePath(path)
 }
 
 // invalidatePath deletes cache item by its path
-func (c *FileCache) invalidatePath(itemPath string) {
-	_ = os.Remove(itemPath)
+func (c *FileCache) invalidatePath(itemPath string) error {
+	var res error
+
+	err := os.Remove(itemPath)
+	if err != nil {
+		res = err
+	}
 
 	path := c.metaFilePath(itemPath)
-	_ = os.Remove(path)
+	err = os.Remove(path)
+	if err != nil && res == nil {
+		res = err
+	}
+
+	return res
 }
 
 // itemPath returns item's cache file path
 func (c *FileCache) itemPath(key string, namespace string, relative bool, createDirs bool) (path string, err error) {
 	key = c.itemKey(key)
+
+	if namespace == "" {
+		namespace = c.NamespaceDefault
+	}
 
 	dir := namespace + "/" + key[:2] + "/" + key[2:4] + "/" + key[4:6] + "/"
 	dirAbs := c.Path + "/" + dir
@@ -176,12 +190,12 @@ func (c *FileCache) itemKey(key string) string {
 
 // isExpired returns true if file is expired or if its TTL is 0
 func (c *FileCache) isExpired(meta *Meta) bool {
-	if meta.TTLSeconds == -1 {
+	if meta.TTL == -1 {
 		return false
 	}
 	now := time.Now().Unix()
-	exp := meta.Created + meta.TTLSeconds
-	return now < exp
+	exp := meta.Created + meta.TTL
+	return now > exp
 }
 
 // writeMeta data to file
@@ -230,7 +244,7 @@ func (c *FileCache) prepareMeta(meta *Meta) {
 	if meta.Namespace == "" {
 		meta.Namespace = c.NamespaceDefault
 	}
-	if meta.TTLSeconds == 0 {
-		meta.TTLSeconds = c.TTLDefault
+	if meta.TTL == 0 {
+		meta.TTL = c.TTLDefault
 	}
 }
