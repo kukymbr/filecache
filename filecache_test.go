@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestFileCache_WriteRead(t *testing.T) {
@@ -22,6 +23,12 @@ func TestFileCache_WriteRead(t *testing.T) {
 		t.Error("failed to create filecache instance:", err)
 		return
 	}
+
+	defer func() {
+		if err = os.RemoveAll(cachePath); err != nil {
+			t.Error("failed to clean up after test")
+		}
+	}()
 
 	key := "testkey"
 	sample := `test data string`
@@ -63,7 +70,25 @@ func TestFileCache_WriteRead(t *testing.T) {
 		t.Error("failed to invalidate cache item")
 	}
 
-	if err = os.RemoveAll(cachePath); err != nil {
-		t.Error("failed to clean up after test")
+	if !testing.Short() {
+		c, err = fc.Write(&filecache.Meta{Key: key, TTL: 1}, reader)
+		if err != nil {
+			t.Error("failed to write data #2 to cache:", err)
+		}
+
+		time.Sleep(2 * time.Second)
+
+		_, err = fc.Read(key, "")
+		if err == nil {
+			t.Error("missing expected error on reading expired item")
+		}
+	}
+}
+
+func TestNew(t *testing.T) {
+	invalid := "/invalidQWERTY.12345/file/path/"
+	_, err := filecache.New(invalid)
+	if err == nil {
+		t.Error("missing expected error on creating log instance with non-accessible path")
 	}
 }
