@@ -2,7 +2,7 @@ image: golang:1.12-alpine
 
 variables:
   REPO_NAME: gitlab.com/kukymbrgo/filecache
-  GO111MODULE: on
+  GO111MODULE: "on"
 
 before_script:
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
