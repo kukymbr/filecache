@@ -1,5 +1,9 @@
 ## Go FileCache
 
+[![Build Status](https://gitlab.com/kukymbrgo/filecache/badges/master/build.svg)](https://gitlab.com/kukymbrgo/filecache/pipelines)
+[![Coverage](https://gitlab.com/kukymbrgo/filecache/badges/master/coverage.svg)](https://gitlab.com/kukymbrgo/filecache)
+[![GoDoc](https://godoc.org/gitlab.com/kukymbrgo/filecache?status.svg)](https://godoc.org/gitlab.com/kukymbrgo/filecache)
+
 Store data from any io.Reader to cache files with TTL and metadata.
 
 ### Installation
