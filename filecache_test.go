@@ -70,6 +70,11 @@ func TestFileCache_WriteRead(t *testing.T) {
 		t.Error("failed to invalidate cache item")
 	}
 
+	_, err = fc.Read(key, "")
+	if err == nil {
+		t.Error("missing expected error on reading from invalidated item")
+	}
+
 	if !testing.Short() {
 		c, err = fc.Write(&filecache.Meta{Key: key, TTL: 1}, reader)
 		if err != nil {
@@ -81,6 +86,18 @@ func TestFileCache_WriteRead(t *testing.T) {
 		_, err = fc.Read(key, "")
 		if err == nil {
 			t.Error("missing expected error on reading expired item")
+		}
+
+		c, err = fc.Write(&filecache.Meta{Key: key, TTL: -1}, reader)
+		if err != nil {
+			t.Error("failed to write data #3 to cache:", err)
+		}
+
+		time.Sleep(1 * time.Second)
+
+		_, err = fc.Read(key, "")
+		if err != nil {
+			t.Error("failed to read from cache:", err)
 		}
 	}
 }

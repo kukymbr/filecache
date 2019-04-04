@@ -68,23 +68,45 @@ type FileCache struct {
 // Write copies data from src Reader to cache file
 // Returns the count of written bytes
 func (c *FileCache) Write(meta *Meta, src io.Reader) (written int64, err error) {
+	item, written, err := c.WriteOpen(meta, src)
+	if err != nil {
+		return 0, err
+	}
+	_ = item.Close()
+	return written, err
+}
+
+// WriteOpen copies data from src Reader to cache file
+// and returns opened cache Item and count of written bytes
+func (c *FileCache) WriteOpen(meta *Meta, src io.Reader) (item *Item, written int64, err error) {
 	c.prepareMeta(meta)
 	path, err := c.itemPath(meta.Key, meta.Namespace, false, true)
 	if err != nil {
-		return 0, err
+		return nil, 0, err
 	}
 
 	target, err := os.Create(path)
 	if err != nil {
-		return 0, err
+		return nil, 0, err
 	}
 
 	if err = c.writeMeta(path, meta); err != nil {
 		_ = c.invalidatePath(path)
-		return 0, err
+		return nil, 0, err
 	}
 
-	return io.Copy(target, src)
+	written, err = io.Copy(target, src)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	item = &Item{
+		File: target,
+		Meta: meta,
+		Path: path,
+	}
+
+	return item, written, nil
 }
 
 // Read returns cache Item if exists
@@ -115,9 +137,9 @@ func (c *FileCache) Read(key string, namespace string) (item *Item, err error) {
 	}
 
 	item = &Item{
-		Reader: f,
-		Meta:   meta,
-		Path:   path,
+		File: f,
+		Meta: meta,
+		Path: path,
 	}
 
 	return item, nil
