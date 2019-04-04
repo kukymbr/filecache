@@ -1,14 +1,14 @@
-# Go FileCache
+## Go FileCache
 
 Store data from any io.Reader to cache files with TTL and metadata.
 
-## Installation
+### Installation
 
 ```sh
 go get -u gitlab.com/kukymbrgo/filecache
 ```
 
-## Usage
+### Usage
 
 ```go
 package main
@@ -61,3 +61,7 @@ func main()  {
     _, _ = ioutil.ReadAll(item.File)
 }
 ```
+
+### License
+
+MIT. See the [LICENSE](/LICENSE) file.
