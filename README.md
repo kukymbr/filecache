@@ -29,6 +29,10 @@ func main()  {
     
     // default time-to-live in seconds; set -1 to eternal
     filecache.TTLDefault = -1
+    
+    // Set garbage collector run probability divisor
+    // (e.g. 10 is 1/10 probability), optional
+    filecache.GCDivisor = 10
 	
     // Initialize cache instance
     fc, err := filecache.New("/path/to/cache/dir")
