@@ -14,9 +14,8 @@ go get -u gitlab.com/kukymbrgo/filecache
 package main
 
 import (
-	"gitlab.com/kukymbrgo/filecache"
-	"io"
-	"io/ioutil"
+    "gitlab.com/kukymbrgo/filecache"
+    "io/ioutil"
 )
 
 func main()  {
