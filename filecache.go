@@ -1,5 +1,5 @@
-// Copyright 2019 Sergey Basov. All right reserved.
-// Use of this source code is governed by a MIT-style
+// Copyright 2018-2019 Sergey Basov. All right reserved.
+// Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
 // Package filecache is a tool to write data from any io.Reader
