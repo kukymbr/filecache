@@ -36,7 +36,10 @@ func (gc *garbageCollector) decideToRun() bool {
 func (gc *garbageCollector) run() {
 	walkFn := func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return nil
+		}
+		if info.IsDir() {
+			return nil
 		}
 		if gc.fc.fileIsMeta(path) {
 			return nil
