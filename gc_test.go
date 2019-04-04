@@ -45,6 +45,13 @@ func TestGC(t *testing.T) {
 		}
 	}
 
+	key := "10"
+	reader := strings.NewReader("test string #" + key)
+	_, err = fc.Write(&filecache.Meta{Key: key, TTL: 100}, reader)
+	if err != nil {
+		t.Error("failed to write #" + key)
+	}
+
 	time.Sleep(2 * time.Second)
 
 	filecache.GCDivisor = 1
@@ -61,8 +68,8 @@ func TestGC(t *testing.T) {
 		return
 	}
 
-	if count != 0 {
-		t.Error("expected no files after GC run, got", count)
+	if count != 2 {
+		t.Error("expected 2 files after GC run, got", count)
 	}
 }
 
