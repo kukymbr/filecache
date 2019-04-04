@@ -21,7 +21,7 @@ import (
 
 func main()  {
 	
-    // Set defaults for all instances:
+    // Set defaults for all instances (optional of course):
     // items namespace
     filecache.NamespaceDefault = "dft"
     
@@ -46,23 +46,19 @@ func main()  {
     
     pageUrl := "https://en.wikipedia.org/wiki/Main_Page"
     
-    var reader io.Reader
-    
     item, err := fc.Read(pageUrl, "")
     
     if err != nil {
         // Some slow function call
-        reader := getPageDownloaderReader()
-        _, err = fc.Write(&filecache.Meta{Key: pageUrl}, reader)
+        downloader := getPageDownloaderReader()
+        item, _, err = fc.WriteOpen(&filecache.Meta{Key: pageUrl}, downloader)
         if err != nil {
             // If failed to cache, handle the error       
             panic(err)
         }
-    } else {
-        reader = item.Reader
     }
     
     // Do some stuff
-    _, _ = ioutil.ReadAll(reader)
+    _, _ = ioutil.ReadAll(item.File)
 }
 ```
