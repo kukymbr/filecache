@@ -18,6 +18,9 @@ import (
 	"time"
 )
 
+// MetaPostfix is a metadata files name postfix
+const MetaPostfix = "--meta"
+
 var (
 	// NamespaceDefault is a default cache files namespace
 	NamespaceDefault = "dft"
@@ -28,6 +31,10 @@ var (
 	// TTLDefault is a default value
 	// in seconds of cache items' Time-To-Live
 	TTLDefault = int64(-1)
+
+	// GCDivisor is a garbage collector run probability divisor
+	// (e.g. 100 is 1/100 probability)
+	GCDivisor uint = 100
 )
 
 // New creates new file cache instance
@@ -40,20 +47,26 @@ func New(path string) (*FileCache, error) {
 		return nil, err
 	}
 
-	c := &FileCache{
-		Path:             path,
+	fc := &FileCache{
+		path:             path,
 		NamespaceDefault: NamespaceDefault,
 		Ext:              ExtDefault,
 		TTLDefault:       TTLDefault,
 	}
 
-	return c, nil
+	gc := &garbageCollector{
+		fc: fc,
+	}
+	gc.execute()
+
+	return fc, nil
 }
 
 // FileCache is a file-based cache structure
 type FileCache struct {
-	// Path to the cache files directory
-	Path string
+
+	// path to the cache files directory
+	path string
 
 	// NamespaceDefault is a default namespace if left empty in functions params
 	NamespaceDefault string
@@ -65,10 +78,15 @@ type FileCache struct {
 	TTLDefault int64
 }
 
+// Path returns the cache directory root path
+func (fc *FileCache) Path() string {
+	return fc.path
+}
+
 // Write copies data from src Reader to cache file
 // Returns the count of written bytes
-func (c *FileCache) Write(meta *Meta, src io.Reader) (written int64, err error) {
-	item, written, err := c.WriteOpen(meta, src)
+func (fc *FileCache) Write(meta *Meta, src io.Reader) (written int64, err error) {
+	item, written, err := fc.WriteOpen(meta, src)
 	if err != nil {
 		return 0, err
 	}
@@ -78,9 +96,9 @@ func (c *FileCache) Write(meta *Meta, src io.Reader) (written int64, err error) 
 
 // WriteOpen copies data from src Reader to cache file
 // and returns opened cache Item and count of written bytes
-func (c *FileCache) WriteOpen(meta *Meta, src io.Reader) (item *Item, written int64, err error) {
-	c.prepareMeta(meta)
-	path, err := c.itemPath(meta.Key, meta.Namespace, false, true)
+func (fc *FileCache) WriteOpen(meta *Meta, src io.Reader) (item *Item, written int64, err error) {
+	fc.prepareMeta(meta)
+	path, err := fc.itemPath(meta.Key, meta.Namespace, false, true)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -90,8 +108,8 @@ func (c *FileCache) WriteOpen(meta *Meta, src io.Reader) (item *Item, written in
 		return nil, 0, err
 	}
 
-	if err = c.writeMeta(path, meta); err != nil {
-		_ = c.invalidatePath(path)
+	if err = fc.writeMeta(path, meta); err != nil {
+		_ = fc.invalidatePath(path)
 		return nil, 0, err
 	}
 
@@ -110,8 +128,8 @@ func (c *FileCache) WriteOpen(meta *Meta, src io.Reader) (item *Item, written in
 }
 
 // Read returns cache Item if exists
-func (c *FileCache) Read(key string, namespace string) (item *Item, err error) {
-	path, err := c.itemPath(
+func (fc *FileCache) Read(key string, namespace string) (item *Item, err error) {
+	path, err := fc.itemPath(
 		key,
 		namespace,
 		false,
@@ -121,13 +139,13 @@ func (c *FileCache) Read(key string, namespace string) (item *Item, err error) {
 		return nil, err
 	}
 
-	meta := c.readMeta(path)
+	meta := fc.readMeta(path)
 	if meta == nil {
-		_ = c.invalidatePath(path)
+		_ = fc.invalidatePath(path)
 		return nil, errors.New("failed to read meta for key" + key + " in namespace " + namespace)
 	}
-	if c.isExpired(meta) {
-		_ = c.invalidatePath(path)
+	if fc.isExpired(meta) {
+		_ = fc.invalidatePath(path)
 		return nil, errors.New("file is expired")
 	}
 
@@ -146,16 +164,16 @@ func (c *FileCache) Read(key string, namespace string) (item *Item, err error) {
 }
 
 // Invalidate deletes cache item by its key & namespace
-func (c *FileCache) Invalidate(key string, namespace string) error {
-	path, err := c.itemPath(key, namespace, false, false)
+func (fc *FileCache) Invalidate(key string, namespace string) error {
+	path, err := fc.itemPath(key, namespace, false, false)
 	if err != nil {
 		return err
 	}
-	return c.invalidatePath(path)
+	return fc.invalidatePath(path)
 }
 
 // invalidatePath deletes cache item by its path
-func (c *FileCache) invalidatePath(itemPath string) error {
+func (fc *FileCache) invalidatePath(itemPath string) error {
 	var res error
 
 	err := os.Remove(itemPath)
@@ -163,7 +181,7 @@ func (c *FileCache) invalidatePath(itemPath string) error {
 		res = err
 	}
 
-	path := c.metaFilePath(itemPath)
+	path := fc.metaFilePath(itemPath)
 	err = os.Remove(path)
 	if err != nil && res == nil {
 		res = err
@@ -173,15 +191,15 @@ func (c *FileCache) invalidatePath(itemPath string) error {
 }
 
 // itemPath returns item's cache file path
-func (c *FileCache) itemPath(key string, namespace string, relative bool, createDirs bool) (path string, err error) {
-	key = c.itemKey(key)
+func (fc *FileCache) itemPath(key string, namespace string, relative bool, createDirs bool) (path string, err error) {
+	key = fc.itemKey(key)
 
 	if namespace == "" {
-		namespace = c.NamespaceDefault
+		namespace = fc.NamespaceDefault
 	}
 
 	dir := namespace + "/" + key[:2] + "/" + key[2:4] + "/" + key[4:6] + "/"
-	dirAbs := c.Path + "/" + dir
+	dirAbs := fc.Path() + "/" + dir
 
 	if !relative {
 		dir = dirAbs
@@ -198,18 +216,18 @@ func (c *FileCache) itemPath(key string, namespace string, relative bool, create
 		}
 	}
 
-	return dir + key[6:] + c.Ext, nil
+	return dir + key[6:] + fc.Ext, nil
 }
 
 // itemKey returns hex-encoded key hash string
-func (c *FileCache) itemKey(key string) string {
+func (fc *FileCache) itemKey(key string) string {
 	h := sha1.New()
 	_, _ = io.WriteString(h, key)
 	return hex.EncodeToString(h.Sum(nil))
 }
 
 // isExpired returns true if file is expired or if its TTL is 0
-func (c *FileCache) isExpired(meta *Meta) bool {
+func (fc *FileCache) isExpired(meta *Meta) bool {
 	if meta.TTL == -1 {
 		return false
 	}
@@ -219,20 +237,20 @@ func (c *FileCache) isExpired(meta *Meta) bool {
 }
 
 // writeMeta data to file
-func (c *FileCache) writeMeta(itemPath string, meta *Meta) error {
+func (fc *FileCache) writeMeta(itemPath string, meta *Meta) error {
 	meta.Created = time.Now().Unix()
 	data, err := jsoniter.Marshal(meta)
 	if err != nil {
 		return err
 	}
-	path := c.metaFilePath(itemPath)
+	path := fc.metaFilePath(itemPath)
 	return ioutil.WriteFile(path, data, 0744)
 }
 
 // readMeta data of cache item from file
 // Returns nil if something goes wrong
-func (c *FileCache) readMeta(itemPath string) *Meta {
-	path := c.metaFilePath(itemPath)
+func (fc *FileCache) readMeta(itemPath string) *Meta {
+	path := fc.metaFilePath(itemPath)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil
 	}
@@ -255,16 +273,26 @@ func (c *FileCache) readMeta(itemPath string) *Meta {
 }
 
 // metaFilePath returns the path of cache item metadata file
-func (c *FileCache) metaFilePath(itemPath string) string {
-	return itemPath + "--meta"
+func (fc *FileCache) metaFilePath(itemPath string) string {
+	return itemPath + MetaPostfix
+}
+
+// fileIsMeta returns true is file name is meta file name
+func (fc *FileCache) fileIsMeta(path string) bool {
+	lp := len(path)
+	lm := len(MetaPostfix)
+	if lp < lm {
+		return false
+	}
+	return path[lp-lm:] == MetaPostfix
 }
 
 // prepareMeta sets default values to meta
-func (c *FileCache) prepareMeta(meta *Meta) {
+func (fc *FileCache) prepareMeta(meta *Meta) {
 	if meta.Namespace == "" {
-		meta.Namespace = c.NamespaceDefault
+		meta.Namespace = fc.NamespaceDefault
 	}
 	if meta.TTL == 0 {
-		meta.TTL = c.TTLDefault
+		meta.TTL = fc.TTLDefault
 	}
 }
