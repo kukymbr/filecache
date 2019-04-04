@@ -97,25 +97,36 @@ func (fc *FileCache) Write(meta *Meta, src io.Reader) (written int64, err error)
 // WriteOpen copies data from src Reader to cache file
 // and returns opened cache Item and count of written bytes
 func (fc *FileCache) WriteOpen(meta *Meta, src io.Reader) (item *Item, written int64, err error) {
+	item, err = fc.Create(meta)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	written, err = io.Copy(item.File, src)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return item, written, nil
+}
+
+// Create cache file by metadata and open it.
+// Returns cache Item and error if occurs.
+func (fc *FileCache) Create(meta *Meta) (item *Item, err error) {
 	fc.prepareMeta(meta)
 	path, err := fc.itemPath(meta.Key, meta.Namespace, false, true)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
 	target, err := os.Create(path)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
 	if err = fc.writeMeta(path, meta); err != nil {
 		_ = fc.invalidatePath(path)
-		return nil, 0, err
-	}
-
-	written, err = io.Copy(target, src)
-	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
 	item = &Item{
@@ -124,7 +135,7 @@ func (fc *FileCache) WriteOpen(meta *Meta, src io.Reader) (item *Item, written i
 		Path: path,
 	}
 
-	return item, written, nil
+	return item, nil
 }
 
 // Read returns cache Item if exists
