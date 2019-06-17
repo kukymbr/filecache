@@ -57,8 +57,9 @@ func main()  {
     item, err := fc.Read(pageUrl, "")
     
     if err != nil {
-        // Some slow function call
+        // Get some reader to read from
         downloader := getPageDownloaderReader()
+        // Read from the reader to the cache
         item, _, err = fc.WriteOpen(&filecache.Meta{Key: pageUrl}, downloader)
         if err != nil {
             // If failed to cache, handle the error       
