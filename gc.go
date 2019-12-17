@@ -3,7 +3,6 @@ package filecache
 import (
 	"math/rand"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -34,22 +33,13 @@ func (gc *garbageCollector) decideToRun() bool {
 }
 
 func (gc *garbageCollector) run() {
-	walkFn := func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if gc.fc.fileIsMeta(path) {
-			return nil
-		}
-		if meta := gc.fc.readMeta(path); meta != nil {
-			if gc.fc.isExpired(meta) {
-				_ = gc.fc.invalidatePath(path)
-			}
+	hitFn := func(meta *Meta, path string, info os.FileInfo) error {
+		if gc.fc.isExpired(meta) {
+			_ = gc.fc.invalidatePath(path)
 		}
 		return nil
 	}
-	_ = filepath.Walk(gc.fc.Path(), walkFn)
+
+	scanner := NewScanner(gc.fc)
+	_ = scanner.Scan(hitFn, false, true)
 }
