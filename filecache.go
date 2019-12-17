@@ -107,6 +107,11 @@ func (fc *FileCache) WriteOpen(meta *Meta, src io.Reader) (item *Item, written i
 		return nil, 0, err
 	}
 
+	_, err = item.File.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	return item, written, nil
 }
 

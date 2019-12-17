@@ -18,7 +18,7 @@ format:
   script:
     - go fmt
     - go vet
-    - go get -u golang.org/x/lint/golint && golint -set_exit_status $(go list ./...)
+    - go get -u golang.org/x/lint/golint && golint -set_exit_status ./...
     - go test -race -coverprofile=coverage.out ./... && go tool cover -func=coverage.out
   coverage: '/^total:\s+\(statements\)\s+(\d+\.\d+%)$/'
   only:
