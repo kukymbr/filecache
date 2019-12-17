@@ -72,6 +72,11 @@ func main()  {
 }
 ```
 
+#### Scanner
+
+If you need to iterate through existing cache files,
+you can use the `filecache.Scanner` tool.
+
 ### License
 
 MIT. See the [LICENSE](/LICENSE) file.

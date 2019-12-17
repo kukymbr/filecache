@@ -34,8 +34,8 @@ func (gc *garbageCollector) decideToRun() bool {
 
 func (gc *garbageCollector) run() {
 	hitFn := func(meta *Meta, path string, info os.FileInfo) error {
-		if gc.fc.isExpired(meta) {
-			_ = gc.fc.invalidatePath(path)
+		if meta.IsExpired() {
+			_ = invalidatePath(path)
 		}
 		return nil
 	}

@@ -7,15 +7,10 @@
 package filecache
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"errors"
-	"github.com/json-iterator/go"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 // MetaPostfix is a metadata files name postfix
@@ -119,25 +114,25 @@ func (fc *FileCache) WriteOpen(meta *Meta, src io.Reader) (item *Item, written i
 // Returns cache Item and error if occurs.
 func (fc *FileCache) Create(meta *Meta) (item *Item, err error) {
 	fc.prepareMeta(meta)
-	path, err := fc.itemPath(meta.Key, meta.Namespace, false, true)
+	itemPath, err := fc.itemPath(meta.Key, meta.Namespace, false, true)
 	if err != nil {
 		return nil, err
 	}
 
-	target, err := os.Create(path)
+	target, err := os.Create(itemPath)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = fc.writeMeta(path, meta); err != nil {
-		_ = fc.invalidatePath(path)
+	if err = meta.saveToFile(itemPath); err != nil {
+		_ = invalidatePath(itemPath)
 		return nil, err
 	}
 
 	item = &Item{
 		File: target,
 		Meta: meta,
-		Path: path,
+		Path: itemPath,
 	}
 
 	return item, nil
@@ -155,13 +150,13 @@ func (fc *FileCache) Read(key string, namespace string) (item *Item, err error) 
 		return nil, err
 	}
 
-	meta := fc.readMeta(path)
+	meta := readItemMeta(path)
 	if meta == nil {
-		_ = fc.invalidatePath(path)
+		_ = invalidatePath(path)
 		return nil, errors.New("failed to read meta for key" + key + " in namespace " + namespace)
 	}
-	if fc.isExpired(meta) {
-		_ = fc.invalidatePath(path)
+	if meta.IsExpired() {
+		_ = invalidatePath(path)
 		return nil, errors.New("file is expired")
 	}
 
@@ -185,30 +180,12 @@ func (fc *FileCache) Invalidate(key string, namespace string) error {
 	if err != nil {
 		return err
 	}
-	return fc.invalidatePath(path)
-}
-
-// invalidatePath deletes cache item by its path
-func (fc *FileCache) invalidatePath(itemPath string) error {
-	var res error
-
-	err := os.Remove(itemPath)
-	if err != nil {
-		res = err
-	}
-
-	path := fc.metaFilePath(itemPath)
-	err = os.Remove(path)
-	if err != nil && res == nil {
-		res = err
-	}
-
-	return res
+	return invalidatePath(path)
 }
 
 // itemPath returns item's cache file path
 func (fc *FileCache) itemPath(key string, namespace string, relative bool, createDirs bool) (path string, err error) {
-	key = fc.itemKey(key)
+	key = itemKey(key)
 
 	if namespace == "" {
 		namespace = fc.NamespaceDefault
@@ -233,74 +210,6 @@ func (fc *FileCache) itemPath(key string, namespace string, relative bool, creat
 	}
 
 	return dir + key[6:] + fc.Ext, nil
-}
-
-// itemKey returns hex-encoded key hash string
-func (fc *FileCache) itemKey(key string) string {
-	h := sha1.New()
-	_, _ = io.WriteString(h, key)
-	return hex.EncodeToString(h.Sum(nil))
-}
-
-// isExpired returns true if file is expired or if its TTL is 0
-func (fc *FileCache) isExpired(meta *Meta) bool {
-	if meta.TTL == -1 {
-		return false
-	}
-	now := time.Now().Unix()
-	exp := meta.Created + meta.TTL
-	return now > exp
-}
-
-// writeMeta data to file
-func (fc *FileCache) writeMeta(itemPath string, meta *Meta) error {
-	meta.Created = time.Now().Unix()
-	data, err := jsoniter.Marshal(meta)
-	if err != nil {
-		return err
-	}
-	path := fc.metaFilePath(itemPath)
-	return ioutil.WriteFile(path, data, 0744)
-}
-
-// readMeta data of cache item from file
-// Returns nil if something goes wrong
-func (fc *FileCache) readMeta(itemPath string) *Meta {
-	path := fc.metaFilePath(itemPath)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil
-	}
-
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil
-	}
-
-	meta := &Meta{}
-	if err = jsoniter.Unmarshal(data, &meta); err != nil {
-		return nil
-	}
-
-	if meta.Key == "" {
-		return nil
-	}
-
-	return meta
-}
-
-// metaFilePath returns the path of cache item metadata file
-func (fc *FileCache) metaFilePath(itemPath string) string {
-	return itemPath + MetaPostfix
-}
-
-// fileIsMeta returns true is file name is meta file name
-func (fc *FileCache) fileIsMeta(path string) bool {
-	lp := len(path)
-	lm := len(MetaPostfix)
-	if lp < lm {
-		return false
-	}
-	return path[lp-lm:] == MetaPostfix
 }
 
 // prepareMeta sets default values to meta

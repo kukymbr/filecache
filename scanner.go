@@ -3,7 +3,6 @@ package filecache
 import (
 	"os"
 	"path/filepath"
-	"syscall"
 )
 
 // NewScanner creates new Scanner instance
@@ -31,7 +30,7 @@ func (s *Scanner) Scan(hitFunc ScannerHitFunc, skipExpired bool, ignoreLStatErro
 				return nil
 			}
 			// if file disappeared while scrolling
-			if e, ok := err.(*os.PathError); ok && e.Err == syscall.ENOENT {
+			if os.IsNotExist(err) {
 				return nil
 			}
 			return err
@@ -39,11 +38,11 @@ func (s *Scanner) Scan(hitFunc ScannerHitFunc, skipExpired bool, ignoreLStatErro
 		if info.IsDir() {
 			return nil
 		}
-		if s.fc.fileIsMeta(path) {
+		if fileIsMeta(path) {
 			return nil
 		}
-		if meta := s.fc.readMeta(path); meta != nil {
-			if skipExpired && s.fc.isExpired(meta) {
+		if meta := readItemMeta(path); meta != nil {
+			if skipExpired && meta.IsExpired() {
 				return nil
 			}
 			return hitFunc(meta, path, info)

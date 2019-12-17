@@ -16,6 +16,12 @@ func TestFileCache_WriteRead(t *testing.T) {
 		panic(err)
 	}
 
+	defer func() {
+		if err = os.RemoveAll(cachePath); err != nil {
+			t.Error("failed to clean up after test")
+		}
+	}()
+
 	filecache.TTLDefault = 3600
 
 	fc, err := filecache.New(cachePath)
@@ -23,12 +29,6 @@ func TestFileCache_WriteRead(t *testing.T) {
 		t.Error("failed to create filecache instance:", err)
 		return
 	}
-
-	defer func() {
-		if err = os.RemoveAll(cachePath); err != nil {
-			t.Error("failed to clean up after test")
-		}
-	}()
 
 	key := "testkey"
 	sample := `test data string`
