@@ -19,7 +19,7 @@ type Scanner struct {
 
 // ScannerHitFunc is a function called on every cache file hit while scanning.
 // Receives found cache item meta, path of cached content file & its info.
-type ScannerHitFunc = func(meta *Meta, path string, info os.FileInfo) error
+type ScannerHitFunc = func(meta *Meta, itemPath string, metaPath string) error
 
 // Scan walks through existing cache files
 // and executes the hit function on every cache file found.
@@ -45,7 +45,8 @@ func (s *Scanner) Scan(hitFunc ScannerHitFunc, skipExpired bool, ignoreLStatErro
 			if skipExpired && meta.IsExpired() {
 				return nil
 			}
-			return hitFunc(meta, path, info)
+			metaPath := itemToMetaPath(path)
+			return hitFunc(meta, path, metaPath)
 		}
 		return nil
 	}

@@ -2,7 +2,6 @@ package filecache
 
 import (
 	"math/rand"
-	"os"
 	"time"
 )
 
@@ -33,9 +32,9 @@ func (gc *garbageCollector) decideToRun() bool {
 }
 
 func (gc *garbageCollector) run() {
-	hitFn := func(meta *Meta, path string, info os.FileInfo) error {
+	hitFn := func(meta *Meta, itemPath string, metaPath string) error {
 		if meta.IsExpired() {
-			_ = invalidatePath(path)
+			_ = invalidatePath(itemPath)
 		}
 		return nil
 	}
