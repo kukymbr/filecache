@@ -23,8 +23,8 @@ func itemToMetaPath(itemPath string) string {
 	return itemPath + MetaPostfix
 }
 
-// fileIsMeta returns true is file name is meta file name
-func fileIsMeta(path string) bool {
+// pathIsMeta returns true is file name is meta file name
+func pathIsMeta(path string) bool {
 	lp := len(path)
 	lm := len(MetaPostfix)
 	if lp < lm {

@@ -64,14 +64,16 @@ func (m *Meta) IsExpired() bool {
 	return now > exp
 }
 
-// saveToFile save JSON-encoded metadata to file
-func (m *Meta) saveToFile(itemPath string) error {
+// SaveToFile saves JSON-encoded metadata to file
+func (m *Meta) SaveToFile(path string) error {
+	if !pathIsMeta(path) {
+		return errors.New(path + " is not a valid meta path: no '" + MetaPostfix + "' name postfix")
+	}
+
 	m.Created = time.Now().Unix()
 	data, err := jsoniter.Marshal(m)
 	if err != nil {
 		return err
 	}
-
-	path := itemToMetaPath(itemPath)
 	return ioutil.WriteFile(path, data, 0744)
 }

@@ -124,7 +124,8 @@ func (fc *FileCache) Create(meta *Meta) (item *Item, err error) {
 		return nil, err
 	}
 
-	if err = meta.saveToFile(itemPath); err != nil {
+	metaPath := itemToMetaPath(itemPath)
+	if err = meta.SaveToFile(metaPath); err != nil {
 		_ = invalidatePath(itemPath)
 		return nil, err
 	}

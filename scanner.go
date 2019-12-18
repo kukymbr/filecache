@@ -38,7 +38,7 @@ func (s *Scanner) Scan(hitFunc ScannerHitFunc, skipExpired bool, ignoreLStatErro
 		if info.IsDir() {
 			return nil
 		}
-		if fileIsMeta(path) {
+		if pathIsMeta(path) {
 			return nil
 		}
 		if meta := readItemMeta(path); meta != nil {
