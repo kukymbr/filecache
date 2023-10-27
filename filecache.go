@@ -9,10 +9,9 @@ import (
 
 const (
 	// TTLEternal is a TTL value for eternal cache.
-	TTLEternal = time.Duration(-1)
+	TTLEternal = time.Duration(0)
 
-	// FilesExtDefault is a default generated files extension.
-	FilesExtDefault = ".cache"
+	gcDivisorDefault = 100
 )
 
 // New creates new file cache instance with a specified target dir & options.
@@ -31,47 +30,78 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 		return nil, err
 	}
 
-	fc := &fileCache{dir: targetDir}
+	fc := &fileCache{
+		dir:           targetDir,
+		ttlDefault:    TTLEternal,
+		gcDivisor:     gcDivisorDefault,
+		pathGenerator: HashedKeySplitPath,
+	}
 
 	if len(options) == 1 {
-		if options[0].FilesExt != "" {
-			fc.filesExt = options[0].FilesExt
-		} else if !options[0].NoExtensions {
-			fc.filesExt = FilesExtDefault
-		}
-
-		if options[0].DefaultTTL != 0 {
+		if options[0].DefaultTTL > 0 {
 			fc.ttlDefault = options[0].DefaultTTL
-		} else {
-			fc.ttlDefault = TTLEternal
 		}
 
 		if options[0].GCDivisor != 0 {
 			fc.gcDivisor = options[0].GCDivisor
+		}
+
+		if options[0].PathGenerator != nil {
+			fc.pathGenerator = options[0].PathGenerator
 		}
 	}
 
 	return fc, nil
 }
 
+// FileCache is a tool to cache data from any io.Reader to the file.
 type FileCache interface {
-	Write(key string, reader io.Reader) (written int, err error)
-	Read(key string) (reader io.ReadCloser, err error)
+	// Write writes data from the reader to the cache file.
+	Write(key string, reader io.Reader, options *ItemOptions) (written int, err error)
+
+	// WriteData writes data to the cache file.
+	WriteData(key string, data []byte, options *ItemOptions) (written int, err error)
+
+	// Open opens the reader with cached data.
+	Open(key string) (result *OpenResult, err error)
+
+	// Read reads data from the cache file.
+	Read(key string) (result *ReadResult, err error)
 }
 
 type fileCache struct {
-	dir        string
-	filesExt   string
-	ttlDefault time.Duration
-	gcDivisor  uint
+	dir           string
+	pathGenerator PathGeneratorFn
+	ttlDefault    time.Duration
+	gcDivisor     uint
 }
 
-func (f *fileCache) Write(key string, reader io.Reader) (written int, err error) {
+func (fc *fileCache) Write(key string, reader io.Reader, options *ItemOptions) (written int, err error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (f *fileCache) Read(key string) (reader io.ReadCloser, err error) {
+func (fc *fileCache) WriteData(key string, data []byte, options *ItemOptions) (written int, err error) {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (fc *fileCache) Open(key string) (result *OpenResult, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (fc *fileCache) Read(key string) (result *ReadResult, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (fc *fileCache) getItemPath(key string, options *ItemOptions, forMeta bool) string {
+	path := fc.pathGenerator(key, options)
+
+	if forMeta {
+		path += metaPostfix
+	}
+
+	return path
 }

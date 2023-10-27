@@ -4,11 +4,8 @@ import "time"
 
 // InstanceOptions are a cache instance options.
 type InstanceOptions struct {
-	// FilesExt is a generated cache files extension.
-	FilesExt string
-
-	// NoExtensions is a flag to disable files extensions at all.
-	NoExtensions bool
+	// PathGenerator is a function to generate cache item's file path.
+	PathGenerator PathGeneratorFn
 
 	// DefaultTTL is a TTL value for the items without it.
 	DefaultTTL time.Duration
