@@ -1,82 +1,85 @@
-## Go FileCache
+# FileCache, version 2
 
-[![Build Status](https://gitlab.com/kukymbrgo/filecache/badges/master/pipeline.svg)](https://gitlab.com/kukymbrgo/filecache/pipelines)
-[![Coverage](https://gitlab.com/kukymbrgo/filecache/badges/master/coverage.svg)](https://gitlab.com/kukymbrgo/filecache)
-[![GoDoc](https://godoc.org/gitlab.com/kukymbrgo/filecache?status.svg)](https://godoc.org/gitlab.com/kukymbrgo/filecache)
-[![GoReport](https://goreportcard.com/badge/github.com/kukymbr/filecache)](https://goreportcard.com/report/github.com/kukymbr/filecache)
+Store data from io.Reader or bytes to cache files with TTL and metadata.
 
-Store data from any io.Reader to cache files with TTL and metadata.
-
-### Installation
+## Installation
 
 ```sh
-go get -u gitlab.com/kukymbrgo/filecache
+go get github.com/kukymbr/filecache
 ```
 
-### Usage
+## Usage
+
+### Initializing the cache instance
 
 ```go
-package main
-
-import (
-    "gitlab.com/kukymbrgo/filecache"
-    "io/ioutil"
-)
-
-func main()  {
-	
-    // Set defaults for all instances (optional of course):
-    // items namespace
-    filecache.NamespaceDefault = "dft"
-    
-    // default cache files extension
-    filecache.ExtDefault = ".cache"
-    
-    // default time-to-live in seconds; set -1 to eternal
-    filecache.TTLDefault = -1
-    
-    // Set garbage collector run probability divisor
-    // (e.g. 10 is 1/10 probability), optional
-    filecache.GCDivisor = 10
-	
-    // Initialize cache instance
-    fc, err := filecache.New("/path/to/cache/dir")
-    if err != nil {
-    	panic(err)
-    } 
-    
-    // Set instance defaults:
-    fc.NamespaceDefault = "wiki"
-    fc.TTLDefault = 3600
-    fc.Ext = ".html"
-    
-    // Read and write some data 
-    
-    pageUrl := "https://en.wikipedia.org/wiki/Main_Page"
-    
-    item, err := fc.Read(pageUrl, "")
-    
-    if err != nil {
-        // Get some reader to read from
-        downloader := getPageDownloaderReader()
-        // Read from the reader to the cache
-        item, _, err = fc.WriteOpen(&filecache.Meta{Key: pageUrl}, downloader)
-        if err != nil {
-            // If failed to cache, handle the error       
-            panic(err)
-        }
-    }
-    
-    // Do some stuff
-    _, _ = ioutil.ReadAll(item.File)
-}
+// With target dir specified
+fc, err := filecache.New("/path/to/cache/dir")
 ```
 
-#### Scanner
+```go
+// With temp dir as a target
+fc, err := filecache.New("")
+```
 
-If you need to iterate through existing cache files,
-you can use the `filecache.Scanner` tool.
+```go
+// With options
+fc, err := filecache.New(
+	"/path/to/cache/dir",
+    filecache.InstanceOptions{
+        PathGenerator: filecache.FilteredKeyPath,
+        DefaultTTL:    time.Hour,
+        GCDivisor:     10,
+    },
+)
+```
 
-### License
+### Saving data to the cache
 
-MIT. See the [LICENSE](/LICENSE) file.
+```go
+// From the io.Reader
+_, err := fc.Write(context.Background(), "key1", strings.NewReader("value1"))
+```
+
+```go
+// From the byte array
+_, err := fc.WriteData(context.Background(), "key2", []byte("value2"))
+```
+
+```go
+// With the item options
+_, err := fc.Write(
+    context.Background(), 
+    "key3", 
+    strings.NewReader("value3"),
+    filecache.ItemOptions{
+        Name:   "Key 3",
+        TTL:    time.Hour * 24,
+        Fields: filecache.NewValues("field1", "val1", "field2", "val2"),
+    },
+)
+```
+
+### Reading from cache
+
+```go
+// Opening the cache file reader
+res, err := fc.Open(context.Background(), "key1")
+reader := res.Reader()
+```
+
+```go
+// Read all the data
+res, err := fc.Read(context.Background(), "key2")
+data := res.Data()
+```
+
+```go
+// Read options
+res, err := fc.Read(context.Background(), "key3")
+name := res.Options().Name
+```
+
+## License
+
+[MIT](/LICENSE).
