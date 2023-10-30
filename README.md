@@ -80,6 +80,21 @@ res, err := fc.Read(context.Background(), "key3")
 name := res.Options().Name
 ```
 
+### Iterate through the cached items
+
+To iterate through the cached items, use the `Scanner` tool:
+
+```go
+// Initialize the scanner
+scanner := filecache.NewScanner(fc.GetPath())
+
+// Iterate
+err = scanner.Scan(func(entry filecache.ScanEntry) error {
+    // Do some nice things  
+    return nil
+})
+```
+
 ## License
 
 [MIT](/LICENSE).

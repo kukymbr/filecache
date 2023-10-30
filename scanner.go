@@ -17,9 +17,8 @@ type ScanEntry struct {
 }
 
 // ScannerHitFn is a function called on every scanner's hit.
-// The `key` parameter is a found cache item's key.
-// The `createdAt` parameter is a time when item was created.
-// The `opt` parameter is an item's ItemOptions data.
+// Function receives the ScanEntry, describing the found cache item.
+// If the function returns an error, the iteration will be stopped.
 type ScannerHitFn func(entry ScanEntry) error
 
 // NewScanner creates a Scanner looking for the valid cache items.
