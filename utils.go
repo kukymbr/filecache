@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 const dirsMode os.FileMode = 0755
@@ -97,4 +98,12 @@ func filterPathIdent(ident string) string {
 	ident = strings.ReplaceAll(ident, "\\", "")
 
 	return ident
+}
+
+func isExpired(createdAt time.Time, ttl time.Duration) bool {
+	if ttl == TTLEternal || ttl <= 0 {
+		return false
+	}
+
+	return time.Since(createdAt) > ttl
 }

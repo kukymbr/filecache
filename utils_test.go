@@ -111,3 +111,38 @@ func TestItemFilesValid_WhenInvalid_ExpectFalse(t *testing.T) {
 		assert.False(t, res, i)
 	}
 }
+
+func TestIsExpired(t *testing.T) {
+	tests := []struct {
+		CreatedAt time.Time
+		TTL       time.Duration
+		Expected  bool
+	}{
+		{
+			CreatedAt: time.Now().Add(-time.Hour * 2),
+			TTL:       time.Hour * 3,
+			Expected:  false,
+		},
+		{
+			CreatedAt: time.Now().Add(-time.Hour * 2),
+			TTL:       TTLEternal,
+			Expected:  false,
+		},
+		{
+			CreatedAt: time.Now().Add(-time.Hour * 2),
+			TTL:       0,
+			Expected:  false,
+		},
+		{
+			CreatedAt: time.Now().Add(-time.Hour * 2),
+			TTL:       time.Hour,
+			Expected:  true,
+		},
+	}
+
+	for i, test := range tests {
+		expired := isExpired(test.CreatedAt, test.TTL)
+
+		assert.Equal(t, test.Expected, expired, i)
+	}
+}

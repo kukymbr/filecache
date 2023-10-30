@@ -279,7 +279,7 @@ func (fc *fileCache) getItemPath(key string, forMeta bool, createDirs bool) stri
 	}
 
 	if forMeta {
-		path += metaPostfix
+		path += metaSuffix
 	}
 
 	return path

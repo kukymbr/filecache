@@ -3,7 +3,6 @@ package filecache_test
 import (
 	"context"
 	"io"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -12,19 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/kukymbrgo/filecache"
 )
-
-func getTarget(t *testing.T, suiteName string) string {
-	target := "./testdata/" + suiteName + "/" + time.Now().Format("20060102150405.99999")
-
-	err := os.MkdirAll(target, 0755)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		_ = os.RemoveAll(target)
-	})
-
-	return target
-}
 
 func TestNew_WhenValid_ExpectNoError(t *testing.T) {
 	tests := []func() (filecache.FileCache, error){

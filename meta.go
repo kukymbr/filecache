@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	metaPostfix = "--meta"
+	metaSuffix = "--meta"
 )
 
 func saveMeta(ctx context.Context, meta *meta, target *os.File) error {
@@ -89,9 +89,5 @@ type meta struct {
 }
 
 func (m *meta) isExpired() bool {
-	if m.TTL == TTLEternal || m.TTL <= 0 {
-		return false
-	}
-
-	return time.Since(m.CreatedAt) > m.TTL
+	return isExpired(m.CreatedAt, m.TTL)
 }
