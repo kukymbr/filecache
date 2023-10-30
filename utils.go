@@ -51,6 +51,21 @@ func validateDir(dir string) error {
 	return nil
 }
 
+// itemFilesValid checks if itemPath & metaPath are a valid files' paths.
+func itemFilesValid(itemPath string, metaPath string) bool {
+	itemStat, err := os.Stat(itemPath)
+	if err != nil {
+		return false
+	}
+
+	metaStat, err := os.Stat(metaPath)
+	if err != nil {
+		return false
+	}
+
+	return !itemStat.IsDir() && !metaStat.IsDir()
+}
+
 // fixSeparators replaces all path separators with the OS-correct.
 func fixSeparators(path string) string {
 	sepToReplace := '/'
@@ -59,4 +74,14 @@ func fixSeparators(path string) string {
 	}
 
 	return strings.ReplaceAll(path, string(sepToReplace), string(os.PathSeparator))
+}
+
+func invalidate(itemPath string, metaPath string) {
+	if itemPath != "" {
+		_ = os.Remove(itemPath)
+	}
+
+	if metaPath != "" {
+		_ = os.Remove(metaPath)
+	}
 }

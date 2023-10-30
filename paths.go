@@ -8,10 +8,10 @@ import (
 )
 
 // PathGeneratorFn is a function to generate cache item's file path.
-type PathGeneratorFn func(key string, options *ItemOptions) string
+type PathGeneratorFn func(key string) string
 
 // HashedKeyPath return hashes key and uses it as a file name.
-func HashedKeyPath(key string, _ *ItemOptions) string {
+func HashedKeyPath(key string) string {
 	h := sha1.New()
 	_, _ = io.WriteString(h, key)
 
@@ -19,7 +19,7 @@ func HashedKeyPath(key string, _ *ItemOptions) string {
 }
 
 // HashedKeySplitPath return hashes key, splits it on the parts which are directories and a file name.
-func HashedKeySplitPath(key string, _ *ItemOptions) string {
+func HashedKeySplitPath(key string) string {
 	h := sha1.New()
 	_, _ = io.WriteString(h, key)
 

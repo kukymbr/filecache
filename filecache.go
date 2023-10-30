@@ -1,6 +1,8 @@
 package filecache
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -9,7 +11,7 @@ import (
 
 const (
 	// TTLEternal is a TTL value for eternal cache.
-	TTLEternal = time.Duration(0)
+	TTLEternal = time.Duration(-1)
 
 	gcDivisorDefault = 100
 )
@@ -35,6 +37,7 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 		ttlDefault:    TTLEternal,
 		gcDivisor:     gcDivisorDefault,
 		pathGenerator: HashedKeySplitPath,
+		keysLocker:    newKeysLocker(),
 	}
 
 	if len(options) == 1 {
@@ -57,16 +60,23 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 // FileCache is a tool to cache data from any io.Reader to the file.
 type FileCache interface {
 	// Write writes data from the reader to the cache file.
-	Write(key string, reader io.Reader, options *ItemOptions) (written int, err error)
+	Write(ctx context.Context, key string, reader io.Reader, options *ItemOptions) (written int64, err error)
 
 	// WriteData writes data to the cache file.
-	WriteData(key string, data []byte, options *ItemOptions) (written int, err error)
+	WriteData(ctx context.Context, key string, data []byte, options *ItemOptions) (written int64, err error)
 
 	// Open opens the reader with cached data.
-	Open(key string) (result *OpenResult, err error)
+	// Returns no error on successful cache hit, on no hit, on invalid cache files.
+	// Returns an error if failed to open an existing cache file.
+	Open(ctx context.Context, key string) (result *OpenResult, err error)
 
 	// Read reads data from the cache file.
-	Read(key string) (result *ReadResult, err error)
+	// Returns no error on successful cache hit, on no hit, on invalid cache files.
+	// Returns an error if failed to open or read an existing cache file.
+	Read(ctx context.Context, key string) (result *ReadResult, err error)
+
+	// Invalidate removes data associated with a key from a cache.
+	Invalidate(ctx context.Context, key string) error
 }
 
 type fileCache struct {
@@ -74,30 +84,174 @@ type fileCache struct {
 	pathGenerator PathGeneratorFn
 	ttlDefault    time.Duration
 	gcDivisor     uint
+
+	keysLocker *keysLocker
 }
 
-func (fc *fileCache) Write(key string, reader io.Reader, options *ItemOptions) (written int, err error) {
-	//TODO implement me
-	panic("implement me")
+func (fc *fileCache) Write(
+	ctx context.Context,
+	key string,
+	reader io.Reader,
+	options *ItemOptions,
+) (written int64, err error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+
+	fc.keysLocker.lock(key)
+	defer fc.keysLocker.unlock(key)
+
+	meta := newMeta(key, options)
+	itemPath := fc.getItemPath(key, false)
+	metaPath := fc.getItemPath(key, true)
+
+	itemF, err := create(key, itemPath)
+	if err != nil {
+		return 0, err
+	}
+
+	defer func() {
+		_ = itemF.Close()
+	}()
+
+	metaF, err := create(key, metaPath)
+	if err != nil {
+		_ = itemF.Close()
+
+		invalidate(itemPath, "")
+
+		return 0, err
+	}
+
+	defer func() {
+		_ = metaF.Close()
+	}()
+
+	undo := func() {
+		_ = itemF.Close()
+		_ = metaF.Close()
+
+		invalidate(itemPath, metaPath)
+	}
+
+	if err := saveMeta(ctx, meta, metaF); err != nil {
+		undo()
+
+		return 0, err
+	}
+
+	n, err := copyWithCtx(ctx, itemF, reader)
+	if err != nil {
+		undo()
+
+		return 0, err
+	}
+
+	return n, nil
 }
 
-func (fc *fileCache) WriteData(key string, data []byte, options *ItemOptions) (written int, err error) {
-	//TODO implement me
-	panic("implement me")
+func (fc *fileCache) WriteData(ctx context.Context, key string, data []byte, options *ItemOptions) (written int64, err error) {
+	reader := bytes.NewReader(data)
+
+	return fc.Write(ctx, key, reader, options)
 }
 
-func (fc *fileCache) Open(key string) (result *OpenResult, err error) {
-	//TODO implement me
-	panic("implement me")
+func (fc *fileCache) Open(ctx context.Context, key string) (result *OpenResult, err error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	result = &OpenResult{}
+
+	fc.keysLocker.lock(key)
+	defer fc.keysLocker.unlock(key)
+
+	itemPath := fc.getItemPath(key, false)
+	metaPath := fc.getItemPath(key, true)
+
+	if !itemFilesValid(itemPath, metaPath) {
+		invalidate(itemPath, metaPath)
+
+		return result, nil
+	}
+
+	meta, err := readMeta(key, metaPath)
+	if err != nil {
+		invalidate(itemPath, metaPath)
+
+		return result, nil
+	}
+
+	if meta.isExpired() {
+		invalidate(itemPath, metaPath)
+
+		return result, nil
+	}
+
+	result.hit = true
+	result.options = metaToOptions(meta)
+
+	result.reader, err = os.Open(itemPath)
+	if err != nil {
+		invalidate(itemPath, metaPath)
+
+		return nil, fmt.Errorf("failed to open cache file for key %s: %w", key, err)
+	}
+
+	return result, nil
 }
 
-func (fc *fileCache) Read(key string) (result *ReadResult, err error) {
-	//TODO implement me
-	panic("implement me")
+func (fc *fileCache) Read(ctx context.Context, key string) (result *ReadResult, err error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	itemPath := fc.getItemPath(key, false)
+	metaPath := fc.getItemPath(key, true)
+
+	openRes, err := fc.Open(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	result = &ReadResult{}
+
+	if !openRes.Hit() {
+		return result, nil
+	}
+
+	data, err := readAll(ctx, openRes.reader)
+	if err != nil {
+		invalidate(itemPath, metaPath)
+
+		return nil, fmt.Errorf("failed to read cache data for key %s: %w", key, err)
+	}
+
+	result.hit = true
+	result.options = openRes.options
+	result.data = data
+
+	return result, nil
 }
 
-func (fc *fileCache) getItemPath(key string, options *ItemOptions, forMeta bool) string {
-	path := fc.pathGenerator(key, options)
+func (fc *fileCache) Invalidate(ctx context.Context, key string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	fc.keysLocker.lock(key)
+	defer fc.keysLocker.unlock(key)
+
+	itemPath := fc.getItemPath(key, false)
+	metaPath := fc.getItemPath(key, true)
+
+	invalidate(itemPath, metaPath)
+
+	return nil
+}
+
+func (fc *fileCache) getItemPath(key string, forMeta bool) string {
+	path := fc.pathGenerator(key)
 
 	if forMeta {
 		path += metaPostfix
