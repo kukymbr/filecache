@@ -186,4 +186,10 @@ func TestFileCache_WhenContextCanceled_ExpectError(t *testing.T) {
 		assert.Nil(t, res)
 		assert.ErrorIs(t, err, context.Canceled)
 	}
+
+	{
+		err := fc.Invalidate(ctx, "test1")
+
+		assert.ErrorIs(t, err, context.Canceled)
+	}
 }
