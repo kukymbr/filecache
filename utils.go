@@ -53,6 +53,10 @@ func validateDir(dir string) error {
 
 // itemFilesValid checks if itemPath & metaPath are a valid files' paths.
 func itemFilesValid(itemPath string, metaPath string) bool {
+	if itemPath == "" || metaPath == "" {
+		return false
+	}
+
 	itemStat, err := os.Stat(itemPath)
 	if err != nil {
 		return false
@@ -76,6 +80,7 @@ func fixSeparators(path string) string {
 	return strings.ReplaceAll(path, string(sepToReplace), string(os.PathSeparator))
 }
 
+// invalidate removes cache files
 func invalidate(itemPath string, metaPath string) {
 	if itemPath != "" {
 		_ = os.Remove(itemPath)
@@ -84,4 +89,12 @@ func invalidate(itemPath string, metaPath string) {
 	if metaPath != "" {
 		_ = os.Remove(metaPath)
 	}
+}
+
+func filterPathIdent(ident string) string {
+	ident = strings.TrimSpace(ident)
+	ident = strings.ReplaceAll(ident, "/", "")
+	ident = strings.ReplaceAll(ident, "\\", "")
+
+	return ident
 }

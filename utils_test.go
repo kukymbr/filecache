@@ -75,3 +75,39 @@ func TestPrepareDir_WhenInvalid_ExpectError(t *testing.T) {
 		assert.NoDirExists(t, dir, i)
 	}
 }
+
+func TestItemFilesValid_WhenValid_ExpectTrue(t *testing.T) {
+	tests := []struct {
+		Item string
+		Meta string
+	}{
+		{"./testdata/utils/cache/item.cache", "./testdata/utils/cache/item.cache--meta"},
+	}
+
+	for i, test := range tests {
+		res := itemFilesValid(test.Item, test.Meta)
+
+		assert.True(t, res, i)
+	}
+}
+
+func TestItemFilesValid_WhenInvalid_ExpectFalse(t *testing.T) {
+	tests := []struct {
+		Item string
+		Meta string
+	}{
+		{"", ""},
+		{"./testdata/utils/cache/item.cache", ""},
+		{"./testdata/utils/cache/item.cache", "./testdata/utils/cache"},
+		{"./testdata/utils/cache/item.cache", "./testdata/utils/cache/unknown--meta"},
+		{"", "./testdata/utils/cache/item.cache--meta"},
+		{"./testdata/utils/cache", "./testdata/utils/cache/item.cache--meta"},
+		{"./testdata/utils/cache/unknown--meta", "./testdata/utils/cache/item.cache--meta"},
+	}
+
+	for i, test := range tests {
+		res := itemFilesValid(test.Item, test.Meta)
+
+		assert.False(t, res, i)
+	}
+}

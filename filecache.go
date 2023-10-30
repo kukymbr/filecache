@@ -150,7 +150,12 @@ func (fc *fileCache) Write(
 	return n, nil
 }
 
-func (fc *fileCache) WriteData(ctx context.Context, key string, data []byte, options *ItemOptions) (written int64, err error) {
+func (fc *fileCache) WriteData(
+	ctx context.Context,
+	key string,
+	data []byte,
+	options *ItemOptions,
+) (written int64, err error) {
 	reader := bytes.NewReader(data)
 
 	return fc.Write(ctx, key, reader, options)

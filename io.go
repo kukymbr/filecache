@@ -41,6 +41,7 @@ func copyWithCtx(ctx context.Context, dst io.Writer, src io.Reader) (readN int64
 // readAll is an alias for an io.ReadAll, but with context cancel respect.
 func readAll(ctx context.Context, r io.Reader) ([]byte, error) {
 	b := make([]byte, 0, 512)
+
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil, err
