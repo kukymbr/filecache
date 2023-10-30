@@ -37,6 +37,7 @@ func (g *garbageCollector) decideToRun() bool {
 	case 1:
 		return true
 	default:
+		//nolint:gosec
 		i := (rand.Int63n(int64(g.divisor)) + 1) / int64(g.divisor)
 
 		return i == 1
