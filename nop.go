@@ -38,3 +38,7 @@ func (fc *nopFileCache) Read(_ context.Context, _ string) (result *ReadResult, e
 		options: &ItemOptions{},
 	}, nil
 }
+
+func (fc *nopFileCache) Invalidate(_ context.Context, _ string) error {
+	return nil
+}
