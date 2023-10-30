@@ -39,11 +39,10 @@ func TestScanner(t *testing.T) {
 	time.Sleep(2 * time.Millisecond)
 
 	scanner := filecache.NewScanner(fc.GetPath())
-
 	scannedKeys := make([]string, 0)
 
-	err = scanner.Scan(func(key string, createdAt time.Time, opt *filecache.ItemOptions) error {
-		scannedKeys = append(scannedKeys, key)
+	err = scanner.Scan(func(entry filecache.ScanEntry) error {
+		scannedKeys = append(scannedKeys, entry.Key)
 
 		return nil
 	})

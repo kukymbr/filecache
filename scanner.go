@@ -7,11 +7,20 @@ import (
 	"time"
 )
 
+// ScanEntry is a scanner hit entry.
+type ScanEntry struct {
+	Key       string
+	CreatedAt time.Time
+	Options   *ItemOptions
+	itemPath  string
+	metaPath  string
+}
+
 // ScannerHitFn is a function called on every scanner's hit.
 // The `key` parameter is a found cache item's key.
 // The `createdAt` parameter is a time when item was created.
 // The `opt` parameter is an item's ItemOptions data.
-type ScannerHitFn func(key string, createdAt time.Time, opt *ItemOptions) error
+type ScannerHitFn func(entry ScanEntry) error
 
 // NewScanner creates a Scanner looking for the valid cache items.
 func NewScanner(dir string) Scanner {
@@ -67,6 +76,12 @@ func (s *scanner) Scan(onHit ScannerHitFn) error {
 			return nil
 		}
 
-		return onHit(meta.Key, meta.CreatedAt, metaToOptions(meta))
+		return onHit(ScanEntry{
+			Key:       meta.Key,
+			CreatedAt: meta.CreatedAt,
+			Options:   metaToOptions(meta),
+			itemPath:  itemPath,
+			metaPath:  metaPath,
+		})
 	})
 }

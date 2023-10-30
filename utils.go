@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -92,6 +93,7 @@ func invalidate(itemPath string, metaPath string) {
 	}
 }
 
+// filterPathIdent remove path separators from the path part.
 func filterPathIdent(ident string) string {
 	ident = strings.TrimSpace(ident)
 	ident = strings.ReplaceAll(ident, "/", "")
@@ -100,10 +102,27 @@ func filterPathIdent(ident string) string {
 	return ident
 }
 
+// isExpired checks if item is expired.
 func isExpired(createdAt time.Time, ttl time.Duration) bool {
 	if ttl == TTLEternal || ttl <= 0 {
 		return false
 	}
 
 	return time.Since(createdAt) > ttl
+}
+
+// getItemPath returns full item's path.
+func getItemPath(dir string, pathGenerator PathGeneratorFn, key string, forMeta bool, createDirs bool) string {
+	path := filepath.Join(dir, pathGenerator(key))
+	itemDir := filepath.Dir(fixSeparators(path))
+
+	if itemDir != "." && createDirs {
+		_ = os.MkdirAll(itemDir, dirsMode)
+	}
+
+	if forMeta {
+		path += metaSuffix
+	}
+
+	return path
 }

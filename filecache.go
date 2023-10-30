@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -14,7 +13,7 @@ const (
 	// TTLEternal is a TTL value for eternal cache.
 	TTLEternal = time.Duration(-1)
 
-	gcDivisorDefault = 100
+	gcDivisorDefault = uint(100)
 )
 
 // New creates new file cache instance with a specified target dir & options.
@@ -29,6 +28,8 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 		targetDir = os.TempDir()
 	}
 
+	gcDivisor := gcDivisorDefault
+
 	if err := prepareDir(targetDir); err != nil {
 		return nil, err
 	}
@@ -36,7 +37,6 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 	fc := &fileCache{
 		dir:           targetDir,
 		ttlDefault:    TTLEternal,
-		gcDivisor:     gcDivisorDefault,
 		pathGenerator: HashedKeySplitPath,
 		keysLocker:    newKeysLocker(),
 	}
@@ -47,13 +47,15 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 		}
 
 		if options[0].GCDivisor != 0 {
-			fc.gcDivisor = options[0].GCDivisor
+			gcDivisor = options[0].GCDivisor
 		}
 
 		if options[0].PathGenerator != nil {
 			fc.pathGenerator = options[0].PathGenerator
 		}
 	}
+
+	_ = newGarbageCollector(targetDir, gcDivisor).run()
 
 	return fc, nil
 }
@@ -87,7 +89,6 @@ type fileCache struct {
 	dir           string
 	pathGenerator PathGeneratorFn
 	ttlDefault    time.Duration
-	gcDivisor     uint
 
 	keysLocker *keysLocker
 }
@@ -271,16 +272,5 @@ func (fc *fileCache) Invalidate(ctx context.Context, key string) error {
 }
 
 func (fc *fileCache) getItemPath(key string, forMeta bool, createDirs bool) string {
-	path := filepath.Join(fc.GetPath(), fc.pathGenerator(key))
-	dir := filepath.Dir(fixSeparators(path))
-
-	if dir != "." && createDirs {
-		_ = os.MkdirAll(dir, dirsMode)
-	}
-
-	if forMeta {
-		path += metaSuffix
-	}
-
-	return path
+	return getItemPath(fc.GetPath(), fc.pathGenerator, key, forMeta, createDirs)
 }
