@@ -46,12 +46,18 @@ func readMeta(key string, path string) (*meta, error) {
 	return meta, nil
 }
 
-func newMeta(key string, options *ItemOptions) *meta {
+func newMeta(key string, options *ItemOptions, defaultTTL time.Duration) *meta {
+	ttl := defaultTTL
+
+	if options.TTL != 0 {
+		ttl = options.TTL
+	}
+
 	return &meta{
 		Key:       key,
 		CreatedAt: time.Now(),
 		Name:      options.Name,
-		TTL:       options.TTL,
+		TTL:       ttl,
 		Fields:    options.Fields,
 	}
 }

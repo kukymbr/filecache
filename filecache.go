@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -41,7 +42,7 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 	}
 
 	if len(options) == 1 {
-		if options[0].DefaultTTL > 0 {
+		if options[0].DefaultTTL != 0 {
 			fc.ttlDefault = options[0].DefaultTTL
 		}
 
@@ -59,20 +60,23 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 
 // FileCache is a tool to cache data from any io.Reader to the file.
 type FileCache interface {
+	// GetPath returns the target path of the FileCache instance.
+	GetPath() string
+
 	// Write writes data from the reader to the cache file.
-	Write(ctx context.Context, key string, reader io.Reader, options *ItemOptions) (written int64, err error)
+	Write(ctx context.Context, key string, reader io.Reader, options ...ItemOptions) (written int64, err error)
 
 	// WriteData writes data to the cache file.
-	WriteData(ctx context.Context, key string, data []byte, options *ItemOptions) (written int64, err error)
+	WriteData(ctx context.Context, key string, data []byte, options ...ItemOptions) (written int64, err error)
 
 	// Open opens the reader with cached data.
 	// Returns no error on successful cache hit, on no hit, on invalid cache files.
-	// Returns an error if failed to open an existing cache file.
+	// Returns an error if failed to open an existing cache file or if context is done.
 	Open(ctx context.Context, key string) (result *OpenResult, err error)
 
 	// Read reads data from the cache file.
 	// Returns no error on successful cache hit, on no hit, on invalid cache files.
-	// Returns an error if failed to open or read an existing cache file.
+	// Returns an error if failed to open or read an existing cache file or if context is done.
 	Read(ctx context.Context, key string) (result *ReadResult, err error)
 
 	// Invalidate removes data associated with a key from a cache.
@@ -88,22 +92,33 @@ type fileCache struct {
 	keysLocker *keysLocker
 }
 
+func (fc *fileCache) GetPath() string {
+	return fc.dir
+}
+
+//nolint:funlen
 func (fc *fileCache) Write(
 	ctx context.Context,
 	key string,
 	reader io.Reader,
-	options *ItemOptions,
+	options ...ItemOptions,
 ) (written int64, err error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
 
+	opt := ItemOptions{}
+
+	if len(options) > 0 {
+		opt = options[0]
+	}
+
 	fc.keysLocker.lock(key)
 	defer fc.keysLocker.unlock(key)
 
-	meta := newMeta(key, options)
-	itemPath := fc.getItemPath(key, false)
-	metaPath := fc.getItemPath(key, true)
+	meta := newMeta(key, &opt, fc.ttlDefault)
+	itemPath := fc.getItemPath(key, false, true)
+	metaPath := fc.getItemPath(key, true, true)
 
 	itemF, err := create(key, itemPath)
 	if err != nil {
@@ -154,11 +169,11 @@ func (fc *fileCache) WriteData(
 	ctx context.Context,
 	key string,
 	data []byte,
-	options *ItemOptions,
+	options ...ItemOptions,
 ) (written int64, err error) {
 	reader := bytes.NewReader(data)
 
-	return fc.Write(ctx, key, reader, options)
+	return fc.Write(ctx, key, reader, options...)
 }
 
 func (fc *fileCache) Open(ctx context.Context, key string) (result *OpenResult, err error) {
@@ -171,8 +186,8 @@ func (fc *fileCache) Open(ctx context.Context, key string) (result *OpenResult, 
 	fc.keysLocker.lock(key)
 	defer fc.keysLocker.unlock(key)
 
-	itemPath := fc.getItemPath(key, false)
-	metaPath := fc.getItemPath(key, true)
+	itemPath := fc.getItemPath(key, false, false)
+	metaPath := fc.getItemPath(key, true, false)
 
 	if !itemFilesValid(itemPath, metaPath) {
 		invalidate(itemPath, metaPath)
@@ -211,8 +226,8 @@ func (fc *fileCache) Read(ctx context.Context, key string) (result *ReadResult, 
 		return nil, err
 	}
 
-	itemPath := fc.getItemPath(key, false)
-	metaPath := fc.getItemPath(key, true)
+	itemPath := fc.getItemPath(key, false, false)
+	metaPath := fc.getItemPath(key, true, false)
 
 	openRes, err := fc.Open(ctx, key)
 	if err != nil {
@@ -247,16 +262,21 @@ func (fc *fileCache) Invalidate(ctx context.Context, key string) error {
 	fc.keysLocker.lock(key)
 	defer fc.keysLocker.unlock(key)
 
-	itemPath := fc.getItemPath(key, false)
-	metaPath := fc.getItemPath(key, true)
+	itemPath := fc.getItemPath(key, false, false)
+	metaPath := fc.getItemPath(key, true, false)
 
 	invalidate(itemPath, metaPath)
 
 	return nil
 }
 
-func (fc *fileCache) getItemPath(key string, forMeta bool) string {
-	path := fc.pathGenerator(key)
+func (fc *fileCache) getItemPath(key string, forMeta bool, createDirs bool) string {
+	path := filepath.Join(fc.GetPath(), fc.pathGenerator(key))
+	dir := filepath.Dir(fixSeparators(path))
+
+	if dir != "." && createDirs {
+		_ = os.MkdirAll(dir, dirsMode)
+	}
 
 	if forMeta {
 		path += metaPostfix

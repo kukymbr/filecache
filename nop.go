@@ -3,6 +3,7 @@ package filecache
 import (
 	"context"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -13,11 +14,15 @@ func NewNop() FileCache {
 
 type nopFileCache struct{}
 
-func (fc *nopFileCache) Write(_ context.Context, _ string, _ io.Reader, _ *ItemOptions) (written int64, err error) {
+func (fc *nopFileCache) GetPath() string {
+	return os.TempDir()
+}
+
+func (fc *nopFileCache) Write(_ context.Context, _ string, _ io.Reader, _ ...ItemOptions) (written int64, err error) {
 	return 0, nil
 }
 
-func (fc *nopFileCache) WriteData(_ context.Context, _ string, _ []byte, _ *ItemOptions) (written int64, err error) {
+func (fc *nopFileCache) WriteData(_ context.Context, _ string, _ []byte, _ ...ItemOptions) (written int64, err error) {
 	return 0, nil
 }
 
