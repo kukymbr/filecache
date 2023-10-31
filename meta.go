@@ -1,79 +1,93 @@
 package filecache
 
 import (
-	"errors"
-	jsoniter "github.com/json-iterator/go"
-	"io/ioutil"
+	"bytes"
+	"context"
+	"fmt"
+	"os"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
-// MetaFromFile reads cache metadata from file
-func MetaFromFile(path string) (meta *Meta, err error) {
-	data, err := ioutil.ReadFile(path)
+const (
+	metaSuffix = "--meta"
+)
+
+func saveMeta(ctx context.Context, meta *meta, target *os.File) error {
+	json := jsoniter.ConfigFastest
+
+	data, err := json.Marshal(meta)
 	if err != nil {
-		return
+		return fmt.Errorf("failed to marshal meta for key %s: %w", meta.Key, err)
 	}
 
-	meta = &Meta{}
-	if err = jsoniter.Unmarshal(data, &meta); err != nil {
-		return
+	if _, err := copyWithCtx(ctx, target, bytes.NewReader(data)); err != nil {
+		return fmt.Errorf("failed to save meta for key %s: %w", meta.Key, err)
 	}
 
-	if meta.Key == "" {
-		return nil, errors.New("cache meta file " + path + " is invalid: no key is defined")
-	}
-	if meta.Created == 0 {
-		return nil, errors.New("cache meta file " + path + " is invalid: no created time is defined")
-	}
-
-	return
+	return nil
 }
 
-// Meta is a cache item metadata structure
-// Short json keys are used to reduce file size
-type Meta struct {
-	// Key is a non-hashed unique for namespace item id
-	// Required
+func readMeta(key string, path string) (*meta, error) {
+	json := jsoniter.ConfigFastest
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read meta file for key %s: %w", key, err)
+	}
+
+	var meta *meta
+
+	if err := json.Unmarshal(data, &meta); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal meta for key %s: %w", key, err)
+	}
+
+	return meta, nil
+}
+
+func newMeta(key string, options *ItemOptions, defaultTTL time.Duration) *meta {
+	ttl := defaultTTL
+
+	if options.TTL != 0 {
+		ttl = options.TTL
+	}
+
+	return &meta{
+		Key:       key,
+		CreatedAt: time.Now(),
+		Name:      options.Name,
+		TTL:       ttl,
+		Fields:    options.Fields,
+	}
+}
+
+func metaToOptions(meta *meta) *ItemOptions {
+	return &ItemOptions{
+		Name:   meta.Name,
+		TTL:    meta.TTL,
+		Fields: meta.Fields,
+	}
+}
+
+// meta is a metadata stored with a cache item file.
+type meta struct {
+	// Key is a unique cache item key.
 	Key string `json:"k"`
 
-	// Namespace is a cache item category folder name
-	// If empty FileCache.NamespaceDefault will be set
-	Namespace string `json:"n"`
+	// CreatedAt is a time when cache item was created.
+	CreatedAt time.Time `json:"c"`
 
-	// OriginalName is an original file name; optional
-	OriginalName string `json:"o,omitempty"`
+	// Name is a human-readable item name.
+	Name string `json:"n,omitempty"`
 
-	// TTL is a item's time-to-live value in seconds
-	TTL int64 `json:"t"`
+	// TTL is an item's time-to-live value.
+	TTL time.Duration `json:"t,omitempty"`
 
-	// Created is a time when cache file was written
-	// Do not set it by yourself
-	Created int64 `json:"c"`
-
-	// Fields is a map of any others metadata fields
-	Fields map[string]interface{} `json:"f,omitempty"`
+	// Fields is a map of any other metadata fields.
+	Fields Values `json:"f,omitempty"`
 }
 
-// IsExpired returns true if file is expired or if its TTL is 0
-func (m *Meta) IsExpired() bool {
-	if m.TTL == -1 {
-		return false
-	}
-	now := time.Now().Unix()
-	exp := m.Created + m.TTL
-	return now > exp
-}
-
-// SaveToFile saves JSON-encoded metadata to file
-func (m *Meta) SaveToFile(path string) error {
-	if !pathIsMeta(path) {
-		return errors.New(path + " is not a valid meta path: no '" + MetaPostfix + "' name postfix")
-	}
-
-	m.Created = time.Now().Unix()
-	data, err := jsoniter.Marshal(m)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(path, data, 0744)
+func (m *meta) isExpired() bool {
+	return isExpired(m.CreatedAt, m.TTL)
 }

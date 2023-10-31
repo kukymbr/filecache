@@ -1,91 +1,75 @@
-package filecache_test
+package filecache
 
 import (
-	"gitlab.com/kukymbrgo/filecache"
-	"io/ioutil"
+	"context"
 	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestGC(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping GC test")
+func TestGarbageCollector(t *testing.T) {
+	t.Cleanup(func() {
+		_ = os.RemoveAll("./testdata/gc")
+	})
+
+	{
+		err := os.MkdirAll("./testdata/gc", dirsMode)
+		require.NoError(t, err)
+
+		err = os.WriteFile("./testdata/gc/test1.cache", []byte("value1"), filesMode)
+		require.NoError(t, err)
+
+		err = os.WriteFile("./testdata/gc/test2.cache", []byte("value2"), filesMode)
+		require.NoError(t, err)
+
+		m1 := newMeta("test1", &ItemOptions{TTL: time.Millisecond}, time.Hour)
+		f1, err := os.Create("./testdata/gc/test1.cache--meta")
+		require.NoError(t, err)
+
+		err = saveMeta(context.Background(), m1, f1)
+		require.NoError(t, err)
+
+		m2 := newMeta("test2", &ItemOptions{TTL: time.Hour}, time.Hour)
+		f2, err := os.Create("./testdata/gc/test2.cache--meta")
+		require.NoError(t, err)
+
+		err = saveMeta(context.Background(), m2, f2)
+		require.NoError(t, err)
 	}
 
-	cachePath, err := ioutil.TempDir("", "kukymbrgo-filecache-test")
-	if err != nil {
-		panic(err)
-	}
-
-	filecache.TTLDefault = 1
-	filecache.GCDivisor = 0
-
-	fc, err := filecache.New(cachePath)
-	if err != nil {
-		t.Error("failed to create filecache instance:", err)
-		return
-	}
-
-	defer func() {
-		if err = os.RemoveAll(cachePath); err != nil {
-			t.Error("failed to clean up after test")
+	{
+		gc := &garbageCollector{
+			dir:     "./testdata/gc",
+			divisor: 0,
 		}
-	}()
 
-	for i := 0; i < 10; i++ {
-		key := strconv.FormatInt(int64(i), 10)
-		reader := strings.NewReader("test string #" + key)
-		_, err = fc.Write(&filecache.Meta{Key: key}, reader)
-		if err != nil {
-			t.Error("failed to write #" + key)
+		assert.False(t, gc.decideToRun())
+	}
+
+	{
+		gc := &garbageCollector{
+			dir:     "./testdata/gc",
+			divisor: 1,
 		}
+
+		assert.True(t, gc.decideToRun())
 	}
 
-	key := "10"
-	reader := strings.NewReader("test string #" + key)
-	_, err = fc.Write(&filecache.Meta{Key: key, TTL: 100}, reader)
-	if err != nil {
-		t.Error("failed to write #" + key)
-	}
-
-	time.Sleep(2 * time.Second)
-
-	filecache.GCDivisor = 1
-
-	fc, err = filecache.New(cachePath)
-	if err != nil {
-		t.Error("failed to recreate filecache instance:", err)
-		return
-	}
-
-	count, err := countFiles(fc.Path())
-	if err != nil {
-		t.Error("failed to count files in dir", fc.Path())
-		return
-	}
-
-	if count != 2 {
-		t.Error("expected 2 files after GC run, got", count)
-	}
-}
-
-// countFiles in dir recursively
-func countFiles(path string) (count int, err error) {
-	count = 0
-	walkFn := func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	{
+		gc := &garbageCollector{
+			dir:     "./testdata/gc",
+			divisor: 1,
 		}
-		if info.IsDir() {
-			return nil
-		}
-		count++
-		return nil
+
+		err := gc.run()
+
+		assert.NoError(t, err)
+		assert.NoFileExists(t, "./testdata/gc/test1.cache")
+		assert.NoFileExists(t, "./testdata/gc/test1.cache--meta")
+		assert.FileExists(t, "./testdata/gc/test2.cache")
+		assert.FileExists(t, "./testdata/gc/test2.cache--meta")
 	}
-	err = filepath.Walk(path, walkFn)
-	return
 }

@@ -1,55 +1,86 @@
 package filecache
 
 import (
-	"os"
+	"io/fs"
 	"path/filepath"
+	"strings"
+	"time"
 )
 
-// NewScanner creates new Scanner instance
-func NewScanner(fc *FileCache) *Scanner {
-	return &Scanner{
-		fc: fc,
+// ScanEntry is a scanner hit entry.
+type ScanEntry struct {
+	Key       string
+	CreatedAt time.Time
+	Options   *ItemOptions
+	itemPath  string
+	metaPath  string
+}
+
+// ScannerHitFn is a function called on every scanner's hit.
+// Function receives the ScanEntry, describing the found cache item.
+// If the function returns an error, the iteration will be stopped.
+type ScannerHitFn func(entry ScanEntry) error
+
+// NewScanner creates a Scanner looking for the valid cache items.
+func NewScanner(dir string) Scanner {
+	return &scanner{dir: dir}
+}
+
+// newExpiredScanner creates a Scanner looking for the expired items.
+func newExpiredScanner(dir string) Scanner {
+	return &scanner{
+		dir:         dir,
+		expiredOnly: true,
 	}
 }
 
-// Scanner is a tool to walk through existing cache files
-type Scanner struct {
-	fc *FileCache
+// Scanner is a tool to scan cache items inside the specified directory.
+type Scanner interface {
+	Scan(onHit ScannerHitFn) error
 }
 
-// ScannerHitFunc is a function called on every cache file hit while scanning.
-// Receives found cache item meta, path of cached content file & its info.
-type ScannerHitFunc = func(meta *Meta, itemPath string, metaPath string) error
+type scanner struct {
+	dir         string
+	expiredOnly bool
+}
 
-// Scan walks through existing cache files
-// and executes the hit function on every cache file found.
-func (s *Scanner) Scan(hitFunc ScannerHitFunc, skipExpired bool, ignoreLStatErrors bool) error {
-	walkFn := func(path string, info os.FileInfo, err error) error {
+func (s *scanner) Scan(onHit ScannerHitFn) error {
+	return filepath.WalkDir(s.dir, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
-			if ignoreLStatErrors {
-				return nil
-			}
-			// if file disappeared while scrolling
-			if os.IsNotExist(err) {
-				return nil
-			}
 			return err
 		}
-		if info.IsDir() {
-			return nil
-		}
-		if pathIsMeta(path) {
-			return nil
-		}
-		if meta := readItemMeta(path); meta != nil {
-			if skipExpired && meta.IsExpired() {
-				return nil
-			}
-			metaPath := itemToMetaPath(path)
-			return hitFunc(meta, path, metaPath)
-		}
-		return nil
-	}
 
-	return filepath.Walk(s.fc.Path(), walkFn)
+		if entry.IsDir() {
+			return nil
+		}
+
+		if !strings.HasSuffix(entry.Name(), metaSuffix) {
+			return nil
+		}
+
+		itemPath := strings.TrimSuffix(path, metaSuffix)
+		metaPath := path
+
+		if !itemFilesValid(itemPath, metaPath) {
+			return nil
+		}
+
+		meta, err := readMeta("", path)
+		if err != nil {
+			//nolint:nilerr
+			return nil
+		}
+
+		if s.expiredOnly && !meta.isExpired() || !s.expiredOnly && meta.isExpired() {
+			return nil
+		}
+
+		return onHit(ScanEntry{
+			Key:       meta.Key,
+			CreatedAt: meta.CreatedAt,
+			Options:   metaToOptions(meta),
+			itemPath:  itemPath,
+			metaPath:  metaPath,
+		})
+	})
 }

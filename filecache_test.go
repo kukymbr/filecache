@@ -1,103 +1,181 @@
 package filecache_test
 
 import (
-	"gitlab.com/kukymbrgo/filecache"
-	"io/ioutil"
-	"os"
-	"path/filepath"
+	"context"
+	"io"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gitlab.com/kukymbrgo/filecache"
 )
 
+func TestNew_WhenValid_ExpectNoError(t *testing.T) {
+	tests := []func() (filecache.FileCache, error){
+		func() (filecache.FileCache, error) {
+			return filecache.New("")
+		},
+		func() (filecache.FileCache, error) {
+			return filecache.New("./testdata/new")
+		},
+		func() (filecache.FileCache, error) {
+			return filecache.New("./testdata/new", filecache.InstanceOptions{})
+		},
+		func() (filecache.FileCache, error) {
+			return filecache.New("", filecache.InstanceOptions{
+				PathGenerator: filecache.FilteredKeyPath,
+				DefaultTTL:    time.Hour,
+				GCDivisor:     1,
+			})
+		},
+	}
+
+	for i, factory := range tests {
+		fc, err := factory()
+
+		assert.NotNil(t, fc, i)
+		assert.NoError(t, err, i)
+		assert.NotEmpty(t, fc.GetPath())
+		assert.NotEqual(t, ".", fc.GetPath())
+		assert.DirExists(t, fc.GetPath(), i)
+	}
+}
+
+func TestNew_WhenInvalid_ExpectError(t *testing.T) {
+	tests := []func() (filecache.FileCache, error){
+		func() (filecache.FileCache, error) {
+			return filecache.New("./testdata/new/item.cache")
+		},
+		func() (filecache.FileCache, error) {
+			return filecache.New("", filecache.InstanceOptions{}, filecache.InstanceOptions{})
+		},
+	}
+
+	for i, factory := range tests {
+		fc, err := factory()
+
+		assert.Nil(t, fc, i)
+		assert.Error(t, err, i)
+	}
+}
+
 func TestFileCache_WriteRead(t *testing.T) {
-	cachePath, err := ioutil.TempDir("", "kukymbrgo-filecache-test")
-	if err != nil {
-		panic(err)
+	target := getTarget(t, "writeread")
+
+	fc, err := filecache.New(target)
+	require.NoError(t, err)
+
+	{
+		n, err := fc.Write(context.Background(), "test1", strings.NewReader("value1"))
+
+		assert.Equal(t, int64(6), n)
+		assert.NoError(t, err)
 	}
 
-	defer func() {
-		if err = os.RemoveAll(cachePath); err != nil {
-			t.Error("failed to clean up after test")
-		}
-	}()
+	{
+		n, err := fc.WriteData(
+			context.Background(),
+			"test2",
+			[]byte("value2"),
+			filecache.ItemOptions{
+				Name:   "Name2",
+				TTL:    time.Hour,
+				Fields: filecache.NewValues("key1", "val1", "key2", "val2"),
+			},
+		)
 
-	filecache.TTLDefault = 3600
-
-	fc, err := filecache.New(cachePath)
-	if err != nil {
-		t.Error("failed to create filecache instance:", err)
-		return
+		assert.Equal(t, int64(6), n)
+		assert.NoError(t, err)
 	}
 
-	key := "testkey"
-	sample := `test data string`
-	sLen := len(sample)
-	reader := strings.NewReader(sample)
+	{
+		res, err := fc.Open(context.Background(), "test1")
 
-	c, err := fc.Write(&filecache.Meta{Key: key}, reader)
-	if err != nil {
-		t.Error("failed to write data to cache:", err)
-		return
+		reader := res.Reader()
+		options := res.Options()
+
+		data, readErr := io.ReadAll(reader)
+
+		assert.NotNil(t, res)
+		assert.NoError(t, err)
+		assert.True(t, res.Hit())
+		assert.NotNil(t, reader)
+		assert.NotNil(t, options)
+		assert.Equal(t, "value1", string(data))
+		assert.NoError(t, readErr)
 	}
 
-	if c != int64(sLen) {
-		t.Error("written and expected string lengths does not match: expected", sLen, "got", c)
-		return
+	{
+		res, err := fc.Read(context.Background(), "test2")
+
+		data := res.Data()
+		options := res.Options()
+
+		assert.NotNil(t, res)
+		assert.NoError(t, err)
+		assert.True(t, res.Hit())
+		assert.NotNil(t, data)
+		assert.NotNil(t, options)
+		assert.Equal(t, "value2", string(data))
+		assert.Equal(t, "Name2", options.Name)
+		assert.Equal(t, time.Hour, options.TTL)
+		assert.Equal(t, "val1", options.Fields["key1"])
+		assert.Equal(t, "val2", options.Fields["key2"])
 	}
 
-	item, err := fc.Read(key, "")
-	if err != nil {
-		t.Error("failed to read data from cache:", err)
-		return
+	{
+		err := fc.Invalidate(context.Background(), "test1")
+
+		assert.NoError(t, err)
 	}
 
-	if item.Meta.Namespace != filecache.NamespaceDefault {
-		t.Error("expected default namespace", filecache.NamespaceDefault, "got", item.Meta.Namespace)
+	{
+		err := fc.Invalidate(context.Background(), "test2")
+
+		assert.NoError(t, err)
+	}
+}
+
+func TestFileCache_WhenContextCanceled_ExpectError(t *testing.T) {
+	fc, err := filecache.New("")
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	{
+		n, err := fc.Write(ctx, "test1", strings.NewReader("value1"))
+
+		assert.Equal(t, int64(0), n)
+		assert.ErrorIs(t, err, context.Canceled)
 	}
 
-	if item.Meta.TTL != filecache.TTLDefault {
-		t.Error("expected default TTL", filecache.TTLDefault, "got", item.Meta.TTL)
+	{
+		n, err := fc.WriteData(ctx, "test2", []byte("value2"))
+
+		assert.Equal(t, int64(0), n)
+		assert.ErrorIs(t, err, context.Canceled)
 	}
 
-	ext := filepath.Ext(item.Path)
-	if ext != filecache.ExtDefault {
-		t.Error("expected default extension", filecache.ExtDefault, "got", ext)
+	{
+		res, err := fc.Open(ctx, "test1")
+
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, context.Canceled)
 	}
 
-	err = fc.Invalidate(key, "")
-	if err != nil {
-		t.Error("failed to invalidate cache item")
+	{
+		res, err := fc.Read(ctx, "test2")
+
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, context.Canceled)
 	}
 
-	_, err = fc.Read(key, "")
-	if err == nil {
-		t.Error("missing expected error on reading from invalidated item")
-	}
+	{
+		err := fc.Invalidate(ctx, "test1")
 
-	if !testing.Short() {
-		c, err = fc.Write(&filecache.Meta{Key: key, TTL: 1}, reader)
-		if err != nil {
-			t.Error("failed to write data #2 to cache:", err)
-		}
-
-		time.Sleep(2 * time.Second)
-
-		_, err = fc.Read(key, "")
-		if err == nil {
-			t.Error("missing expected error on reading expired item")
-		}
-
-		c, err = fc.Write(&filecache.Meta{Key: key, TTL: -1}, reader)
-		if err != nil {
-			t.Error("failed to write data #3 to cache:", err)
-		}
-
-		time.Sleep(1 * time.Second)
-
-		_, err = fc.Read(key, "")
-		if err != nil {
-			t.Error("failed to read from cache:", err)
-		}
+		assert.ErrorIs(t, err, context.Canceled)
 	}
 }
