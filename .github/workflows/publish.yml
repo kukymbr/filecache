@@ -10,5 +10,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+
       - name: Ping endpoint
-        run: curl "https://proxy.golang.org/github.com/kukymbr/filecache/@v/$(git describe HEAD --tags --abbrev=0).info"
+        run: curl "https://proxy.golang.org/github.com/kukymbr/filecache/v2/@v/$(git describe HEAD --tags --abbrev=0).info"
