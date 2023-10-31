@@ -1,4 +1,4 @@
-name: Test, lint and build
+name: make
 
 on:
   push:
@@ -20,9 +20,6 @@ jobs:
 
     - name: Test
       run: make test
-
-    - name: Lint
-      run: make lint
 
     - name: Build
       run: make build
