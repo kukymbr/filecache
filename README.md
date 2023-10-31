@@ -1,6 +1,6 @@
 # 📦 FileCache `v2`
 
-[![Build](https://github.com/kukymbr/filecache/actions/workflows/go.yml/badge.svg)](https://github.com/kukymbr/filecache/actions/workflows/go.yml)
+[![Make](https://github.com/kukymbr/filecache/actions/workflows/make.yml/badge.svg)](https://github.com/kukymbr/filecache/actions/workflows/make.yml)
 
 Store data from io.Reader or bytes to cache files with TTL and metadata.
 
