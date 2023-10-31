@@ -17,5 +17,8 @@ test:
 	go tool cover -html=coverage.out -o coverage.html
 	rm -f coverage.out
 
+build:
+	go build
+
 clean:
 	go clean
