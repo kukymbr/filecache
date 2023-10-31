@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kukymbr/filecache/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/kukymbrgo/filecache"
 )
 
 func TestNew_WhenValid_ExpectNoError(t *testing.T) {

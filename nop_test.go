@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kukymbr/filecache/v2"
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/kukymbrgo/filecache"
 )
 
 func TestNopFileCache(t *testing.T) {

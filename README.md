@@ -7,7 +7,7 @@ Store data from io.Reader or bytes to cache files with TTL and metadata.
 ## Installation
 
 ```sh
-go get github.com/kukymbr/filecache 
+go get github.com/kukymbr/filecache/v2 
 ```
 
 ## Usage

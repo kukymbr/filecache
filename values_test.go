@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kukymbr/filecache/v2"
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/kukymbrgo/filecache"
 )
 
 func TestNewValues(t *testing.T) {
