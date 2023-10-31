@@ -34,6 +34,8 @@ fc, err := filecache.New(
 )
 ```
 
+See the [`InstanceOptions` godoc](options.go) for the instance configuration values.
+
 ### Saving data to the cache
 
 ```go
@@ -59,6 +61,8 @@ _, err := fc.Write(
     },
 )
 ```
+
+See the [`ItemOptions` godoc](options.go) for the instance configuration values.
 
 ### Reading from cache
 
