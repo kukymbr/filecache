@@ -34,7 +34,4 @@ jobs:
         chart: true
         amend: true
         reuse-go: true
-      if: |
-        matrix.os == 'ubuntu-latest' &&
-        github.event_name == 'push'
       continue-on-error: true
