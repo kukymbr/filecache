@@ -1,7 +1,6 @@
 # 📦 FileCache `v2`
 
 [![Build](https://github.com/kukymbr/filecache/actions/workflows/go.yml/badge.svg)](https://github.com/kukymbr/filecache/actions/workflows/go.yml)
-[![Go Coverage](https://github.com/kukymbr/filecache/wiki/coverage.svg)](https://raw.githack.com/wiki/kukymbr/filecache/coverage.html)
 
 Store data from io.Reader or bytes to cache files with TTL and metadata.
 

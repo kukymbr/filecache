@@ -21,12 +21,6 @@ jobs:
     - name: Test
       run: make test
 
-    - name: Upload Go test coverage
-      uses: actions/upload-artifact@v3
-      with:
-        name: coverage
-        path: coverage.*
-
     - name: Lint
       run: make lint
 
