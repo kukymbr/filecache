@@ -1,8 +1,8 @@
 # 📦 FileCache `v2`
 
 [![Make](https://github.com/kukymbr/filecache/actions/workflows/make.yml/badge.svg)](https://github.com/kukymbr/filecache/actions/workflows/make.yml)
-[![GoDoc](https://godoc.org/github.com/kukymbr/filecache?status.svg)](https://godoc.org/github.com/kukymbr/filecache)
-[![GoReport](https://goreportcard.com/badge/github.com/kukymbr/filecache)](https://goreportcard.com/report/github.com/kukymbr/filecache)
+[![GoDoc](https://godoc.org/github.com/kukymbr/filecache/v2?status.svg)](https://godoc.org/github.com/kukymbr/filecache/v2)
+[![GoReport](https://goreportcard.com/badge/github.com/kukymbr/filecache/v2)](https://goreportcard.com/report/github.com/kukymbr/filecache/v2)
 
 Store data from io.Reader or bytes to cache files with TTL and metadata.
 
