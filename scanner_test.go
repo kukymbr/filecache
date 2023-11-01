@@ -47,6 +47,7 @@ func TestScanner(t *testing.T) {
 		return nil
 	})
 
+	assert.NoError(t, err)
 	assert.Len(t, scannedKeys, 2)
 	assert.Contains(t, scannedKeys, "test1")
 	assert.Contains(t, scannedKeys, "test2")
