@@ -41,32 +41,24 @@ func TestGarbageCollector(t *testing.T) {
 	}
 
 	{
-		gc := &garbageCollector{
-			dir:     "./testdata/gc",
-			divisor: 0,
-		}
+		gc := &gcProbability{}
 
-		assert.False(t, gc.decideToRun())
+		assert.False(t, gc.decideToRun(0))
 	}
 
 	{
-		gc := &garbageCollector{
-			dir:     "./testdata/gc",
-			divisor: 1,
-		}
+		gc := &gcProbability{}
 
-		assert.True(t, gc.decideToRun())
+		assert.True(t, gc.decideToRun(1))
 	}
 
 	{
-		gc := &garbageCollector{
-			dir:     "./testdata/gc",
-			divisor: 1,
+		gc := &gcProbability{
+			dir: "./testdata/gc",
 		}
 
-		err := gc.run()
+		gc.run(1)
 
-		assert.NoError(t, err)
 		assert.NoFileExists(t, "./testdata/gc/test1.cache")
 		assert.NoFileExists(t, "./testdata/gc/test1.cache--meta")
 		assert.FileExists(t, "./testdata/gc/test2.cache")

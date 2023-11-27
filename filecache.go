@@ -12,8 +12,6 @@ import (
 const (
 	// TTLEternal is a TTL value for eternal cache.
 	TTLEternal = time.Duration(-1)
-
-	gcDivisorDefault = uint(100)
 )
 
 // New creates new file cache instance with a specified target dir & options.
@@ -28,8 +26,6 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 		targetDir = os.TempDir()
 	}
 
-	gcDivisor := gcDivisorDefault
-
 	if err := prepareDir(targetDir); err != nil {
 		return nil, err
 	}
@@ -38,6 +34,7 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 		dir:           targetDir,
 		ttlDefault:    TTLEternal,
 		pathGenerator: HashedKeySplitPath,
+		gc:            NewProbabilityGarbageCollector(targetDir, 1, 100),
 		keysLocker:    newKeysLocker(),
 	}
 
@@ -46,8 +43,10 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 			fc.ttlDefault = options[0].DefaultTTL
 		}
 
-		if options[0].GCDivisor != 0 {
-			gcDivisor = options[0].GCDivisor
+		if options[0].GC != nil {
+			fc.gc = options[0].GC
+		} else if options[0].GCDivisor != 0 {
+			fc.gc = NewProbabilityGarbageCollector(targetDir, 1, options[0].GCDivisor)
 		}
 
 		if options[0].PathGenerator != nil {
@@ -55,7 +54,7 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 		}
 	}
 
-	_ = newGarbageCollector(targetDir, gcDivisor).run()
+	go fc.gc.OnInstanceInit()
 
 	return fc, nil
 }
@@ -83,12 +82,16 @@ type FileCache interface {
 
 	// Invalidate removes data associated with a key from a cache.
 	Invalidate(ctx context.Context, key string) error
+
+	// Close closes the FileCache instance.
+	Close() error
 }
 
 type fileCache struct {
 	dir           string
 	pathGenerator PathGeneratorFn
 	ttlDefault    time.Duration
+	gc            GarbageCollector
 
 	keysLocker *keysLocker
 }
@@ -107,6 +110,10 @@ func (fc *fileCache) Write(
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
+
+	defer func() {
+		go fc.gc.OnOperation()
+	}()
 
 	opt := ItemOptions{}
 
@@ -182,6 +189,10 @@ func (fc *fileCache) Open(ctx context.Context, key string) (result *OpenResult, 
 		return nil, err
 	}
 
+	defer func() {
+		go fc.gc.OnOperation()
+	}()
+
 	result = &OpenResult{}
 
 	fc.keysLocker.lock(key)
@@ -227,6 +238,10 @@ func (fc *fileCache) Read(ctx context.Context, key string) (result *ReadResult, 
 		return nil, err
 	}
 
+	defer func() {
+		go fc.gc.OnOperation()
+	}()
+
 	itemPath := fc.getItemPath(key, false, false)
 	metaPath := fc.getItemPath(key, true, false)
 
@@ -260,6 +275,10 @@ func (fc *fileCache) Invalidate(ctx context.Context, key string) error {
 		return err
 	}
 
+	defer func() {
+		go fc.gc.OnOperation()
+	}()
+
 	fc.keysLocker.lock(key)
 	defer fc.keysLocker.unlock(key)
 
@@ -267,6 +286,14 @@ func (fc *fileCache) Invalidate(ctx context.Context, key string) error {
 	metaPath := fc.getItemPath(key, true, false)
 
 	invalidate(itemPath, metaPath)
+
+	return nil
+}
+
+func (fc *fileCache) Close() error {
+	if err := fc.gc.Close(); err != nil {
+		return err
+	}
 
 	return nil
 }

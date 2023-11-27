@@ -10,8 +10,13 @@ type InstanceOptions struct {
 	// DefaultTTL is a TTL value for the items without it.
 	DefaultTTL time.Duration
 
+	// GC is a GarbageCollector instance for the cache instance.
+	GC GarbageCollector
+
 	// GCDivisor is a garbage collector run probability divisor
 	// (e.g., 100 is 1/100 probability).
+	//
+	// Deprecated: use the GC property instead.
 	GCDivisor uint
 }
 

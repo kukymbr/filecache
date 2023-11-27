@@ -47,3 +47,7 @@ func (fc *nopFileCache) Read(_ context.Context, _ string) (result *ReadResult, e
 func (fc *nopFileCache) Invalidate(_ context.Context, _ string) error {
 	return nil
 }
+
+func (fc *nopFileCache) Close() error {
+	return nil
+}
