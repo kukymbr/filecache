@@ -33,7 +33,7 @@ fc, err := filecache.New(
     filecache.InstanceOptions{
         PathGenerator: filecache.FilteredKeyPath,
         DefaultTTL:    time.Hour,
-        GCDivisor:     10,
+        GC:            filecache.NewIntervalGarbageCollector("/path/to/cache/dir", time.Hour),
     },
 )
 ```
@@ -106,6 +106,18 @@ If there is no error, this doesn't mean the result is found, the `res.Hit()` fun
 ### Iterate through the cached items
 
 To iterate through the cached items, use the `Scanner` tool:
+
+### Removing the expired items
+
+The expired cache items are removed by the `GarbageCollector`, assigned to the `FileCache` instance.
+
+There are three types of the `GarbageCollector` adapters:
+
+* `filecache.NewNopGarbageCollector()` — the `GarbageCollector` doing nothing, all the files are kept;
+* `filecache.NewProbabilityGarbageCollector()` — the `GarbageCollector` running with the defined probability, used by default;
+* `filecache.NewIntervalGarbageCollector()` — the `GarbageCollector` running by the time interval.
+
+See the [gc.go's](gc.go) godocs for more info.
 
 ```go
 // Initialize the scanner
