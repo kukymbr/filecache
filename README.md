@@ -29,7 +29,7 @@ fc, err := filecache.New("")
 ```go
 // With options
 fc, err := filecache.New(
-	"/path/to/cache/dir",
+    "/path/to/cache/dir",
     filecache.InstanceOptions{
         PathGenerator: filecache.FilteredKeyPath,
         DefaultTTL:    time.Hour,
@@ -73,20 +73,35 @@ See the [`ItemOptions` godoc](options.go) for the instance configuration values.
 ```go
 // Opening the cache file reader
 res, err := fc.Open(context.Background(), "key1")
-reader := res.Reader()
+if err != nil { 
+    // Handle the error...
+}
+
+if res.Hit() {
+    reader := res.Reader()
+    // Read the data...
+}
 ```
 
 ```go
 // Read all the data
 res, err := fc.Read(context.Background(), "key2")
-data := res.Data()
+if err != nil && res.Hit() {
+    data := res.Data()
+}
 ```
 
 ```go
 // Read options
 res, err := fc.Read(context.Background(), "key3")
-name := res.Options().Name
+if err != nil && res.Hit() {
+    name := res.Options().Name
+}
 ```
+
+The `Open()` and `Read()` functions return an error only if context is canceled
+or if the file open operation has failed. 
+If there is no error, this doesn't mean the result is found, the `res.Hit()` function should be called. 
 
 ### Iterate through the cached items
 
@@ -98,7 +113,7 @@ scanner := filecache.NewScanner(fc.GetPath())
 
 // Iterate
 err = scanner.Scan(func(entry filecache.ScanEntry) error {
-    // Do some nice things  
+    // Do some nice things...
     return nil
 })
 ```
