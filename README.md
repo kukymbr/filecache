@@ -23,7 +23,7 @@ fc, err := filecache.New("/path/to/cache/dir")
 
 ```go
 // With temp dir as a target
-fc, err := filecache.New("")
+fc, err := filecache.NewInTemp()
 ```
 
 ```go
