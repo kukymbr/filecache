@@ -107,6 +107,17 @@ If there is no error, this doesn't mean the result is found, the `res.Hit()` fun
 
 To iterate through the cached items, use the `Scanner` tool:
 
+```go
+scanner := filecache.NewScanner("/path/to/cache/dir")
+
+err := scanner.Scan(func(entry filecache.ScanEntry) error {
+    // Do something with the found entry...
+})
+if err := nil {
+	// Handle the error...
+}
+```
+
 ### Removing the expired items
 
 The expired cache items are removed by the `GarbageCollector`, assigned to the `FileCache` instance.

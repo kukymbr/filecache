@@ -9,11 +9,17 @@ import (
 
 // ScanEntry is a scanner hit entry.
 type ScanEntry struct {
-	Key       string
+	// Key is a cache item key.
+	Key string
+
+	// CreatedAt is a cache item created-at timestamp.
 	CreatedAt time.Time
-	Options   *ItemOptions
-	itemPath  string
-	metaPath  string
+
+	// Options are the options of the item stored in the cache.
+	Options *ItemOptions
+
+	itemPath string
+	metaPath string
 }
 
 // ScannerHitFn is a function called on every scanner's hit.
