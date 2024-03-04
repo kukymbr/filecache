@@ -10,6 +10,7 @@ import (
 )
 
 // PathGeneratorFn is a function to generate cache item's file path.
+// Receives the key of the cache item and returns the path of the item relative to the cache instance's dir.
 type PathGeneratorFn func(key string) string
 
 // WithExt returns new PathGeneratorWithExt instance.
@@ -36,7 +37,7 @@ func FilteredKeyPath(key string) string {
 	return path
 }
 
-// HashedKeyPath return hashes key and uses it as a file name.
+// HashedKeyPath return hashed key and uses it as a file name.
 func HashedKeyPath(key string) string {
 	//nolint:gosec
 	h := sha1.New()

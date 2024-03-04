@@ -76,11 +76,13 @@ type FileCache interface {
 	WriteData(ctx context.Context, key string, data []byte, options ...ItemOptions) (written int64, err error)
 
 	// Open opens the reader with cached data.
+	//
 	// Returns no error on successful cache hit, on no hit, on invalid cache files.
 	// Returns an error if failed to open an existing cache file or if context is done.
 	Open(ctx context.Context, key string) (result *OpenResult, err error)
 
 	// Read reads data from the cache file.
+	//
 	// Returns no error on successful cache hit, on no hit, on invalid cache files.
 	// Returns an error if failed to open or read an existing cache file or if context is done.
 	Read(ctx context.Context, key string) (result *ReadResult, err error)

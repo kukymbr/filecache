@@ -20,12 +20,13 @@ func NewNopGarbageCollector() GarbageCollector {
 }
 
 // NewProbabilityGarbageCollector returns the GarbageCollector running with the defined probability.
-// Divisor is a run probability divisor (e.g., divisor equals 100 is a 1/100 probability).
 //
 // Function arguments:
-// * dir - the directory with the FileCache's instance files;
-// * onInitDivisor - divisor for the probability on the OnInstanceInit() function call;
-// * onOpDivisor - divisor for the probability on the OnOperation() function call.
+//   - dir: the directory with the FileCache's instance files;
+//   - onInitDivisor: divisor for the probability on the OnInstanceInit() function call;
+//   - onOpDivisor: divisor for the probability on the OnOperation() function call.
+//
+// Divisor is a run probability divisor (e.g., divisor equals 100 is a 1/100 probability).
 func NewProbabilityGarbageCollector(dir string, onInitDivisor uint, onOpDivisor uint) GarbageCollector {
 	return &gcProbability{
 		dir:           dir,
@@ -35,6 +36,10 @@ func NewProbabilityGarbageCollector(dir string, onInitDivisor uint, onOpDivisor 
 }
 
 // NewIntervalGarbageCollector returns the GarbageCollector running by the interval.
+//
+// Function arguments:
+//   - dir: the directory with the FileCache's instance files;
+//   - interval: the GC interval duration.
 func NewIntervalGarbageCollector(dir string, interval time.Duration) GarbageCollector {
 	return &gcInterval{
 		dir:      dir,
