@@ -43,6 +43,10 @@ func TestNew_WhenValid_ExpectNoError(t *testing.T) {
 		assert.NotEmpty(t, fc.GetPath())
 		assert.NotEqual(t, ".", fc.GetPath())
 		assert.DirExists(t, fc.GetPath(), i)
+
+		err = fc.Close()
+
+		assert.NoError(t, err)
 	}
 }
 

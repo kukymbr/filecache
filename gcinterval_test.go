@@ -26,4 +26,8 @@ func TestIntervalGarbageCollector(t *testing.T) {
 	assert.NoFileExists(t, "./testdata/gc/test1.cache--meta")
 	assert.FileExists(t, "./testdata/gc/test2.cache")
 	assert.FileExists(t, "./testdata/gc/test2.cache--meta")
+
+	err := gc.Close()
+
+	assert.NoError(t, err)
 }
