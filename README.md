@@ -112,9 +112,10 @@ scanner := filecache.NewScanner("/path/to/cache/dir")
 
 err := scanner.Scan(func(entry filecache.ScanEntry) error {
     // Do something with the found entry...
+	return nil
 })
 if err := nil {
-	// Handle the error...
+    // Handle the error...
 }
 ```
 
@@ -122,24 +123,13 @@ if err := nil {
 
 The expired cache items are removed by the `GarbageCollector`, assigned to the `FileCache` instance.
 
-There are three types of the `GarbageCollector` adapters:
+There are three predefined realizations of the `GarbageCollector`:
 
 * `filecache.NewNopGarbageCollector()` — the `GarbageCollector` doing nothing, all the files are kept;
 * `filecache.NewProbabilityGarbageCollector()` — the `GarbageCollector` running with the defined probability, used by default;
 * `filecache.NewIntervalGarbageCollector()` — the `GarbageCollector` running by the time interval.
 
 See the [gc.go's](gc.go) godocs for more info.
-
-```go
-// Initialize the scanner
-scanner := filecache.NewScanner(fc.GetPath())
-
-// Iterate
-err = scanner.Scan(func(entry filecache.ScanEntry) error {
-    // Do some nice things...
-    return nil
-})
-```
 
 ## License
 
