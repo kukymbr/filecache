@@ -14,7 +14,7 @@ const (
 	TTLEternal = time.Duration(-1)
 )
 
-// New creates new file cache instance with a specified target dir & options.
+// New creates a new FileCache instance with a specified target dir & options.
 func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 	if len(options) > 1 {
 		return nil, fmt.Errorf("more than one instance options param behavior is not supported")
@@ -57,6 +57,11 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 	go fc.gc.OnInstanceInit()
 
 	return fc, nil
+}
+
+// NewInTemp creates a new FileCache instance with files stored in the system's temp dir.
+func NewInTemp(options ...InstanceOptions) (FileCache, error) {
+	return New("", options...)
 }
 
 // FileCache is a tool to cache data from any io.Reader to the file.

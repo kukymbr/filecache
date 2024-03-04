@@ -18,6 +18,9 @@ func TestNew_WhenValid_ExpectNoError(t *testing.T) {
 			return filecache.New("")
 		},
 		func() (filecache.FileCache, error) {
+			return filecache.NewInTemp()
+		},
+		func() (filecache.FileCache, error) {
 			return filecache.New("./testdata/new")
 		},
 		func() (filecache.FileCache, error) {
