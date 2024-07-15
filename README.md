@@ -86,7 +86,7 @@ if res.Hit() {
 ```go
 // Read all the data
 res, err := fc.Read(context.Background(), "key2")
-if err != nil && res.Hit() {
+if err == nil && res.Hit() {
     data := res.Data()
 }
 ```
@@ -94,7 +94,7 @@ if err != nil && res.Hit() {
 ```go
 // Read options
 res, err := fc.Read(context.Background(), "key3")
-if err != nil && res.Hit() {
+if err == nil && res.Hit() {
     name := res.Options().Name
 }
 ```
@@ -112,7 +112,7 @@ scanner := filecache.NewScanner("/path/to/cache/dir")
 
 err := scanner.Scan(func(entry filecache.ScanEntry) error {
     // Do something with the found entry...
-	return nil
+    return nil
 })
 if err := nil {
     // Handle the error...
