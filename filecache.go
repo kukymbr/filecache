@@ -37,7 +37,7 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 		ttlDefault:    TTLEternal,
 		pathGenerator: HashedKeySplitPath,
 		gc:            NewProbabilityGarbageCollector(targetDir, 1, 100),
-		keysLocker:    newKeysLocker(),
+		keysLocker:    util.NewKeysLocker(),
 	}
 
 	if len(options) == 1 {
@@ -102,7 +102,7 @@ type fileCache struct {
 	ttlDefault    time.Duration
 	gc            GarbageCollector
 
-	keysLocker *keysLocker
+	keysLocker *util.KeysLocker
 }
 
 func (fc *fileCache) GetPath() string {
@@ -130,8 +130,8 @@ func (fc *fileCache) Write(
 		opt = options[0]
 	}
 
-	fc.keysLocker.lock(key)
-	defer fc.keysLocker.unlock(key)
+	fc.keysLocker.Lock(key)
+	defer fc.keysLocker.Unlock(key)
 
 	meta := newMeta(key, &opt, fc.ttlDefault)
 	itemPath := fc.getItemPath(key, false, true)
@@ -204,8 +204,8 @@ func (fc *fileCache) Open(ctx context.Context, key string) (result *OpenResult, 
 
 	result = &OpenResult{}
 
-	fc.keysLocker.lock(key)
-	defer fc.keysLocker.unlock(key)
+	fc.keysLocker.Lock(key)
+	defer fc.keysLocker.Unlock(key)
 
 	itemPath := fc.getItemPath(key, false, false)
 	metaPath := fc.getItemPath(key, true, false)
@@ -288,8 +288,8 @@ func (fc *fileCache) Invalidate(ctx context.Context, key string) error {
 		go fc.gc.OnOperation()
 	}()
 
-	fc.keysLocker.lock(key)
-	defer fc.keysLocker.unlock(key)
+	fc.keysLocker.Lock(key)
+	defer fc.keysLocker.Unlock(key)
 
 	itemPath := fc.getItemPath(key, false, false)
 	metaPath := fc.getItemPath(key, true, false)
