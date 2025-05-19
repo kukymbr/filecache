@@ -1,0 +1,29 @@
+name: validate
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  validate_and_build:
+    strategy:
+      matrix:
+        go_version: [ "1.20", "1.24" ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go_version }}
+
+      - name: Validate
+        run: make validate
+
+      - name: Build
+        run: make build
