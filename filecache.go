@@ -137,7 +137,7 @@ func (fc *fileCache) Write(
 	itemPath := fc.getItemPath(key, false, true)
 	metaPath := fc.getItemPath(key, true, true)
 
-	itemF, err := create(key, itemPath)
+	itemF, err := util.CreateCacheFile(key, itemPath)
 	if err != nil {
 		return 0, err
 	}
@@ -146,7 +146,7 @@ func (fc *fileCache) Write(
 		_ = itemF.Close()
 	}()
 
-	metaF, err := create(key, metaPath)
+	metaF, err := util.CreateCacheFile(key, metaPath)
 	if err != nil {
 		_ = itemF.Close()
 
@@ -172,7 +172,7 @@ func (fc *fileCache) Write(
 		return 0, err
 	}
 
-	n, err := copyWithCtx(ctx, itemF, reader)
+	n, err := util.CopyWithCtx(ctx, itemF, reader)
 	if err != nil {
 		undo()
 
@@ -265,7 +265,7 @@ func (fc *fileCache) Read(ctx context.Context, key string) (result *ReadResult, 
 		return result, nil
 	}
 
-	data, err := readAll(ctx, openRes.reader)
+	data, err := util.ReadAll(ctx, openRes.reader)
 	if err != nil {
 		util.DeleteCacheFiles(itemPath, metaPath)
 

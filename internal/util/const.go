@@ -9,6 +9,8 @@ const (
 	// TTLEternal is a TTL value for eternal cache.
 	TTLEternal = time.Duration(-1)
 
-	MetaSuffix             = "--meta"
-	DirsMode   os.FileMode = 0755
+	MetaSuffix = "--meta"
+
+	DirsMode  os.FileMode = 0755
+	FilesMode os.FileMode = 0644
 )

@@ -20,10 +20,10 @@ func prepareGCTestFiles(t *testing.T) {
 	err := os.MkdirAll("./testdata/gc", util.DirsMode)
 	require.NoError(t, err)
 
-	err = os.WriteFile("./testdata/gc/test1.cache", []byte("value1"), filesMode)
+	err = os.WriteFile("./testdata/gc/test1.cache", []byte("value1"), util.FilesMode)
 	require.NoError(t, err)
 
-	err = os.WriteFile("./testdata/gc/test2.cache", []byte("value2"), filesMode)
+	err = os.WriteFile("./testdata/gc/test2.cache", []byte("value2"), util.FilesMode)
 	require.NoError(t, err)
 
 	m1 := newMeta("test1", &ItemOptions{TTL: time.Millisecond}, time.Hour)

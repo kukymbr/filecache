@@ -121,3 +121,12 @@ func GetItemPath(dir string, pathGenerator PathGeneratorFn, key string, forMeta 
 
 	return path
 }
+
+func CreateCacheFile(key string, path string) (*os.File, error) {
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, FilesMode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create file for cache key %s: %w", key, err)
+	}
+
+	return f, nil
+}

@@ -41,7 +41,7 @@ func saveMeta(ctx context.Context, meta *meta, target *os.File) error {
 		return fmt.Errorf("failed to marshal meta for key %s: %w", meta.Key, err)
 	}
 
-	if _, err := copyWithCtx(ctx, target, bytes.NewReader(data)); err != nil {
+	if _, err := util.CopyWithCtx(ctx, target, bytes.NewReader(data)); err != nil {
 		return fmt.Errorf("failed to save meta for key %s: %w", meta.Key, err)
 	}
 
