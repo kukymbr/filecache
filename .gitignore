@@ -1,2 +1,6 @@
+# Tests coverage
 coverage.out
 coverage.html
+
+# Linter binary
+bin/golangci-lint
