@@ -1,6 +1,6 @@
 # 📦 FileCache `v2`
 
-[![Make](https://github.com/kukymbr/filecache/actions/workflows/make.yml/badge.svg)](https://github.com/kukymbr/filecache/actions/workflows/make.yml)
+[![Build](https://github.com/kukymbr/filecache/actions/workflows/validate.yml/badge.svg)](https://github.com/kukymbr/filecache/actions/workflows/validate.yml)
 [![GoDoc](https://godoc.org/github.com/kukymbr/filecache/v2?status.svg)](https://godoc.org/github.com/kukymbr/filecache/v2)
 [![GoReport](https://goreportcard.com/badge/github.com/kukymbr/filecache/v2)](https://goreportcard.com/report/github.com/kukymbr/filecache/v2)
 
