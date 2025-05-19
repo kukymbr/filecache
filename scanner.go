@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/kukymbr/filecache/v2/internal/util"
 )
 
 // ScanEntry is a scanner hit entry.
@@ -60,14 +62,14 @@ func (s *scanner) Scan(onHit ScannerHitFn) error {
 			return nil
 		}
 
-		if !strings.HasSuffix(entry.Name(), metaSuffix) {
+		if !strings.HasSuffix(entry.Name(), util.MetaSuffix) {
 			return nil
 		}
 
-		itemPath := strings.TrimSuffix(path, metaSuffix)
+		itemPath := strings.TrimSuffix(path, util.MetaSuffix)
 		metaPath := path
 
-		if !itemFilesValid(itemPath, metaPath) {
+		if !util.ItemFilesValid(itemPath, metaPath) {
 			return nil
 		}
 

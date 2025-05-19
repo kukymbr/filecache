@@ -1,4 +1,4 @@
-package filecache
+package util
 
 import (
 	"errors"
@@ -9,15 +9,21 @@ import (
 	"time"
 )
 
-const dirsMode os.FileMode = 0755
+type PathGeneratorFn func(key string) string
 
-var (
-	ErrDirNotExists = errors.New("directory does not exist")
-	ErrNotADir      = errors.New("not a directory")
-)
+// DeleteCacheFiles removes cache files
+func DeleteCacheFiles(paths ...string) {
+	if len(paths) > 2 {
+		panic("unexpected behaviour: DeleteCacheFiles expects no more than two paths")
+	}
 
-// prepareDir checks if dir exists and creates it otherwise.
-func prepareDir(dir string) error {
+	for _, path := range paths {
+		_ = os.Remove(path)
+	}
+}
+
+// PrepareDir checks if dir exists and creates it otherwise.
+func PrepareDir(dir string) error {
 	err := validateDir(dir)
 
 	if err == nil {
@@ -28,7 +34,7 @@ func prepareDir(dir string) error {
 		return err
 	}
 
-	if err = os.MkdirAll(dir, dirsMode); err != nil {
+	if err = os.MkdirAll(dir, DirsMode); err != nil {
 		return fmt.Errorf("%s dir does not exist and cannot be created: %w", dir, err)
 	}
 
@@ -53,8 +59,8 @@ func validateDir(dir string) error {
 	return nil
 }
 
-// itemFilesValid checks if itemPath & metaPath are a valid files' paths.
-func itemFilesValid(itemPath string, metaPath string) bool {
+// ItemFilesValid checks if itemPath & metaPath are a valid files' paths.
+func ItemFilesValid(itemPath string, metaPath string) bool {
 	if itemPath == "" || metaPath == "" {
 		return false
 	}
@@ -72,8 +78,8 @@ func itemFilesValid(itemPath string, metaPath string) bool {
 	return !itemStat.IsDir() && !metaStat.IsDir()
 }
 
-// fixSeparators replaces all path separators with the OS-correct.
-func fixSeparators(path string) string {
+// FixSeparators replaces all path separators with the OS-correct.
+func FixSeparators(path string) string {
 	sepToReplace := '/'
 	if os.PathSeparator == sepToReplace {
 		sepToReplace = '\\'
@@ -82,19 +88,8 @@ func fixSeparators(path string) string {
 	return strings.ReplaceAll(path, string(sepToReplace), string(os.PathSeparator))
 }
 
-// invalidate removes cache files
-func invalidate(itemPath string, metaPath string) {
-	if itemPath != "" {
-		_ = os.Remove(itemPath)
-	}
-
-	if metaPath != "" {
-		_ = os.Remove(metaPath)
-	}
-}
-
-// filterPathIdent remove path separators from the path part.
-func filterPathIdent(ident string) string {
+// FilterPathIdent remove path separators from the path part.
+func FilterPathIdent(ident string) string {
 	ident = strings.TrimSpace(ident)
 	ident = strings.ReplaceAll(ident, "/", "")
 	ident = strings.ReplaceAll(ident, "\\", "")
@@ -102,8 +97,8 @@ func filterPathIdent(ident string) string {
 	return ident
 }
 
-// isExpired checks if item is expired.
-func isExpired(createdAt time.Time, ttl time.Duration) bool {
+// IsExpired checks if item is expired.
+func IsExpired(createdAt time.Time, ttl time.Duration) bool {
 	if ttl == TTLEternal || ttl <= 0 {
 		return false
 	}
@@ -111,17 +106,17 @@ func isExpired(createdAt time.Time, ttl time.Duration) bool {
 	return time.Since(createdAt) > ttl
 }
 
-// getItemPath returns full item's path.
-func getItemPath(dir string, pathGenerator PathGeneratorFn, key string, forMeta bool, createDirs bool) string {
+// GetItemPath returns full item's path.
+func GetItemPath(dir string, pathGenerator PathGeneratorFn, key string, forMeta bool, createDirs bool) string {
 	path := filepath.Join(dir, pathGenerator(key))
-	itemDir := filepath.Dir(fixSeparators(path))
+	itemDir := filepath.Dir(FixSeparators(path))
 
 	if itemDir != "." && createDirs {
-		_ = os.MkdirAll(itemDir, dirsMode)
+		_ = os.MkdirAll(itemDir, DirsMode)
 	}
 
 	if forMeta {
-		path += metaSuffix
+		path += MetaSuffix
 	}
 
 	return path

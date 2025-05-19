@@ -1,6 +1,6 @@
-//go:build unix
+//go:build windows
 
-package filecache
+package util
 
 import (
 	"testing"
@@ -14,11 +14,12 @@ func TestFixSeparators(t *testing.T) {
 		Expected string
 	}{
 		{"", ""},
-		{`/var\cache\fc`, `/var/cache/fc`},
+		{`C:/data/cache`, `C:\data\cache`},
+		{`C:\data/cache`, `C:\data\cache`},
 	}
 
 	for i, test := range tests {
-		dir := fixSeparators(test.Input)
+		dir := FixSeparators(test.Input)
 
 		assert.Equal(t, test.Expected, dir, i)
 	}

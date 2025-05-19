@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kukymbr/filecache/v2/internal/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,7 +17,7 @@ func prepareGCTestFiles(t *testing.T) {
 
 	_ = os.RemoveAll("./testdata/gc")
 
-	err := os.MkdirAll("./testdata/gc", dirsMode)
+	err := os.MkdirAll("./testdata/gc", util.DirsMode)
 	require.NoError(t, err)
 
 	err = os.WriteFile("./testdata/gc/test1.cache", []byte("value1"), filesMode)

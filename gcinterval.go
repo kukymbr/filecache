@@ -3,6 +3,8 @@ package filecache
 import (
 	"context"
 	"time"
+
+	"github.com/kukymbr/filecache/v2/internal/util"
 )
 
 type gcInterval struct {
@@ -43,7 +45,7 @@ func (g *gcInterval) run() {
 	scanner := newExpiredScanner(g.dir)
 
 	_ = scanner.Scan(func(entry ScanEntry) error {
-		invalidate(entry.itemPath, entry.metaPath)
+		util.DeleteCacheFiles(entry.itemPath, entry.metaPath)
 
 		return nil
 	})

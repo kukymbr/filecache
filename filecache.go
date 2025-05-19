@@ -7,11 +7,13 @@ import (
 	"io"
 	"os"
 	"time"
+
+	"github.com/kukymbr/filecache/v2/internal/util"
 )
 
 const (
 	// TTLEternal is a TTL value for eternal cache.
-	TTLEternal = time.Duration(-1)
+	TTLEternal = util.TTLEternal
 )
 
 // New creates a new FileCache instance with a specified target dir & options.
@@ -20,13 +22,13 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 		return nil, fmt.Errorf("more than one instance options param behavior is not supported")
 	}
 
-	targetDir = fixSeparators(targetDir)
+	targetDir = util.FixSeparators(targetDir)
 
 	if targetDir == "" {
 		targetDir = os.TempDir()
 	}
 
-	if err := prepareDir(targetDir); err != nil {
+	if err := util.PrepareDir(targetDir); err != nil {
 		return nil, err
 	}
 
@@ -50,7 +52,7 @@ func New(targetDir string, options ...InstanceOptions) (FileCache, error) {
 		}
 
 		if options[0].PathGenerator != nil {
-			fc.pathGenerator = options[0].PathGenerator
+			fc.pathGenerator = util.PathGeneratorFn(options[0].PathGenerator)
 		}
 	}
 
@@ -96,7 +98,7 @@ type FileCache interface {
 
 type fileCache struct {
 	dir           string
-	pathGenerator PathGeneratorFn
+	pathGenerator util.PathGeneratorFn
 	ttlDefault    time.Duration
 	gc            GarbageCollector
 
@@ -148,7 +150,7 @@ func (fc *fileCache) Write(
 	if err != nil {
 		_ = itemF.Close()
 
-		invalidate(itemPath, "")
+		util.DeleteCacheFiles(itemPath, "")
 
 		return 0, err
 	}
@@ -161,7 +163,7 @@ func (fc *fileCache) Write(
 		_ = itemF.Close()
 		_ = metaF.Close()
 
-		invalidate(itemPath, metaPath)
+		util.DeleteCacheFiles(itemPath, metaPath)
 	}
 
 	if err := saveMeta(ctx, meta, metaF); err != nil {
@@ -208,21 +210,21 @@ func (fc *fileCache) Open(ctx context.Context, key string) (result *OpenResult, 
 	itemPath := fc.getItemPath(key, false, false)
 	metaPath := fc.getItemPath(key, true, false)
 
-	if !itemFilesValid(itemPath, metaPath) {
-		invalidate(itemPath, metaPath)
+	if !util.ItemFilesValid(itemPath, metaPath) {
+		util.DeleteCacheFiles(itemPath, metaPath)
 
 		return result, nil
 	}
 
 	meta, err := readMeta(key, metaPath)
 	if err != nil {
-		invalidate(itemPath, metaPath)
+		util.DeleteCacheFiles(itemPath, metaPath)
 
 		return result, nil
 	}
 
 	if meta.isExpired() {
-		invalidate(itemPath, metaPath)
+		util.DeleteCacheFiles(itemPath, metaPath)
 
 		return result, nil
 	}
@@ -232,7 +234,7 @@ func (fc *fileCache) Open(ctx context.Context, key string) (result *OpenResult, 
 
 	result.reader, err = os.Open(itemPath)
 	if err != nil {
-		invalidate(itemPath, metaPath)
+		util.DeleteCacheFiles(itemPath, metaPath)
 
 		return nil, fmt.Errorf("failed to open cache file for key %s: %w", key, err)
 	}
@@ -265,7 +267,7 @@ func (fc *fileCache) Read(ctx context.Context, key string) (result *ReadResult, 
 
 	data, err := readAll(ctx, openRes.reader)
 	if err != nil {
-		invalidate(itemPath, metaPath)
+		util.DeleteCacheFiles(itemPath, metaPath)
 
 		return nil, fmt.Errorf("failed to read cache data for key %s: %w", key, err)
 	}
@@ -292,7 +294,7 @@ func (fc *fileCache) Invalidate(ctx context.Context, key string) error {
 	itemPath := fc.getItemPath(key, false, false)
 	metaPath := fc.getItemPath(key, true, false)
 
-	invalidate(itemPath, metaPath)
+	util.DeleteCacheFiles(itemPath, metaPath)
 
 	return nil
 }
@@ -306,5 +308,5 @@ func (fc *fileCache) Close() error {
 }
 
 func (fc *fileCache) getItemPath(key string, forMeta bool, createDirs bool) string {
-	return getItemPath(fc.GetPath(), fc.pathGenerator, key, forMeta, createDirs)
+	return util.GetItemPath(fc.GetPath(), fc.pathGenerator, key, forMeta, createDirs)
 }

@@ -1,4 +1,4 @@
-package filecache
+package util
 
 import (
 	"fmt"
@@ -50,7 +50,7 @@ func TestPrepareDir_WhenValid_ExpectNoError(t *testing.T) {
 		dir := dir
 		existed := validateDir(dir) == nil
 
-		err := prepareDir(dir)
+		err := PrepareDir(dir)
 
 		assert.NoError(t, err, i)
 		assert.DirExists(t, dir, i)
@@ -69,7 +69,7 @@ func TestPrepareDir_WhenInvalid_ExpectError(t *testing.T) {
 	}
 
 	for i, dir := range dirs {
-		err := prepareDir(dir)
+		err := PrepareDir(dir)
 
 		assert.Error(t, err, i)
 		assert.NoDirExists(t, dir, i)
@@ -85,7 +85,7 @@ func TestItemFilesValid_WhenValid_ExpectTrue(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		res := itemFilesValid(test.Item, test.Meta)
+		res := ItemFilesValid(test.Item, test.Meta)
 
 		assert.True(t, res, i)
 	}
@@ -106,7 +106,7 @@ func TestItemFilesValid_WhenInvalid_ExpectFalse(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		res := itemFilesValid(test.Item, test.Meta)
+		res := ItemFilesValid(test.Item, test.Meta)
 
 		assert.False(t, res, i)
 	}
@@ -141,7 +141,7 @@ func TestIsExpired(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		expired := isExpired(test.CreatedAt, test.TTL)
+		expired := IsExpired(test.CreatedAt, test.TTL)
 
 		assert.Equal(t, test.Expected, expired, i)
 	}

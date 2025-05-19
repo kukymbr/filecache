@@ -1,6 +1,10 @@
 package filecache
 
-import "math/rand"
+import (
+	"math/rand"
+
+	"github.com/kukymbr/filecache/v2/internal/util"
+)
 
 type gcProbability struct {
 	dir string
@@ -29,7 +33,7 @@ func (g *gcProbability) run(divisor uint) {
 	scanner := newExpiredScanner(g.dir)
 
 	_ = scanner.Scan(func(entry ScanEntry) error {
-		invalidate(entry.itemPath, entry.metaPath)
+		util.DeleteCacheFiles(entry.itemPath, entry.metaPath)
 
 		return nil
 	})

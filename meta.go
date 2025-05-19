@@ -7,14 +7,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/kukymbr/filecache/v2/internal/util"
 	"github.com/mailru/easyjson"
 )
 
 //go:generate easyjson -omit_empty -no_std_marshalers -all meta.go
-
-const (
-	metaSuffix = "--meta"
-)
 
 // meta is a metadata stored with a cache item file.
 type meta struct {
@@ -35,7 +32,7 @@ type meta struct {
 }
 
 func (m meta) isExpired() bool {
-	return isExpired(m.CreatedAt, m.TTL)
+	return util.IsExpired(m.CreatedAt, m.TTL)
 }
 
 func saveMeta(ctx context.Context, meta *meta, target *os.File) error {
