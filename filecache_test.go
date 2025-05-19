@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kukymbr/filecache/v2"
+	"github.com/franchb/filecache/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -99,9 +99,12 @@ func TestFileCache_WriteRead(t *testing.T) {
 
 	{
 		res, err := fc.Open(context.Background(), "test1")
+		require.NoError(t, err)
 
 		reader := res.Reader()
 		options := res.Options()
+		require.NotNil(t, reader)
+		require.NotNil(t, options)
 
 		data, readErr := io.ReadAll(reader)
 
@@ -116,6 +119,7 @@ func TestFileCache_WriteRead(t *testing.T) {
 
 	{
 		res, err := fc.Read(context.Background(), "test2")
+		require.NoError(t, err)
 
 		data := res.Data()
 		options := res.Options()

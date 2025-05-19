@@ -3,11 +3,10 @@ package filecache
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
-
-	jsoniter "github.com/json-iterator/go"
 )
 
 const (
@@ -15,8 +14,6 @@ const (
 )
 
 func saveMeta(ctx context.Context, meta *meta, target *os.File) error {
-	json := jsoniter.ConfigFastest
-
 	data, err := json.Marshal(meta)
 	if err != nil {
 		return fmt.Errorf("failed to marshal meta for key %s: %w", meta.Key, err)
@@ -30,20 +27,18 @@ func saveMeta(ctx context.Context, meta *meta, target *os.File) error {
 }
 
 func readMeta(key string, path string) (*meta, error) {
-	json := jsoniter.ConfigFastest
-
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read meta file for key %s: %w", key, err)
 	}
 
-	var meta *meta
+	var m *meta
 
-	if err := json.Unmarshal(data, &meta); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal meta for key %s: %w", key, err)
+	if e := json.Unmarshal(data, &m); e != nil {
+		return nil, fmt.Errorf("failed to unmarshal meta for key %s: %w", key, e)
 	}
 
-	return meta, nil
+	return m, nil
 }
 
 func newMeta(key string, options *ItemOptions, defaultTTL time.Duration) *meta {
